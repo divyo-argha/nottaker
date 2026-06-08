@@ -1,0 +1,476 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   nottaker — GUI frontend styles
+   Design: dark glassmorphism, purple accent, JetBrains Mono editor
+   Modern CSS: custom properties, scrollbar-color, field-sizing, oklch gradients
+   ──────────────────────────────────────────────────────────────────────── */
+
+/* ── Design Tokens ────────────────────────────────────────────────────────── */
+:root {
+  /* Colours */
+  --col-bg:          #0f0f0f;
+  --col-surface:     #1a1a2e;
+  --col-surface-2:   #16213e;
+  --col-border:      #2d2d4e;
+  --col-border-soft: #1e1e3a;
+  --col-accent:      #7c3aed;
+  --col-accent-lt:   #a78bfa;
+  --col-accent-glow: oklch(55% 0.24 293);
+  --col-text:        #e5e7eb;
+  --col-muted:       #6b7280;
+  --col-subtle:      #9ca3af;
+  --col-success:     #10b981;
+  --col-warn:        #f59e0b;
+  --col-danger:      #ef4444;
+  --col-tab-active:  #7c3aed;
+  --col-tab-hover:   #2d2d4e;
+
+  /* Typography */
+  --font-ui:     'Inter', system-ui, sans-serif;
+  --font-editor: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  --font-size-sm: 0.75rem;
+  --font-size-md: 0.875rem;
+  --font-size-editor: 0.9375rem; /* 15px — comfortable reading */
+  --line-height-editor: 1.7;
+
+  /* Spacing */
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+
+  /* Chrome */
+  --titlebar-h: 38px;
+  --tabbar-h:   42px;
+  --statusbar-h:32px;
+  --radius-sm:  6px;
+  --radius-md: 10px;
+  --radius-tab: 8px;
+
+  /* Transitions */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration: 150ms;
+
+  color-scheme: dark;
+}
+
+/* ── Reset & Base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: var(--col-bg);
+  color: var(--col-text);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-md);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Layout: stack rows */
+body {
+  display: grid;
+  grid-template-rows: var(--titlebar-h) var(--tabbar-h) 1fr var(--statusbar-h);
+  grid-template-columns: 1fr;
+}
+
+/* Screen-reader only utility */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Title Bar ────────────────────────────────────────────────────────────── */
+.titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--titlebar-h);
+  background: var(--col-surface);
+  border-bottom: 1px solid var(--col-border);
+  padding: 0 var(--space-sm);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.titlebar__drag-region {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex: 1;
+  height: 100%;
+  /* Allow Wails drag on this region */
+}
+
+.titlebar__logo {
+  font-size: 1rem;
+  color: var(--col-accent-lt);
+  filter: drop-shadow(0 0 8px var(--col-accent));
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { filter: drop-shadow(0 0 6px var(--col-accent)); }
+  50%       { filter: drop-shadow(0 0 14px var(--col-accent-lt)); }
+}
+
+.titlebar__name {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--col-subtle);
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+}
+
+/* Window control buttons */
+.titlebar__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.wctrl {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px; height: 22px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  background: var(--col-border);
+  color: transparent;
+  transition: background var(--duration) var(--ease-out),
+              color var(--duration) var(--ease-out),
+              transform var(--duration) var(--ease-out);
+}
+
+.wctrl:hover {
+  color: var(--col-text);
+  transform: scale(1.1);
+}
+
+.wctrl--minimize:hover { background: var(--col-warn); }
+.wctrl--maximize:hover { background: var(--col-success); }
+.wctrl--close:hover    { background: var(--col-danger); }
+
+.wctrl:focus-visible {
+  outline: 2px solid var(--col-accent-lt);
+  outline-offset: 2px;
+}
+
+/* ── Tab Bar ──────────────────────────────────────────────────────────────── */
+.tabbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: var(--tabbar-h);
+  background: var(--col-bg);
+  border-bottom: 1px solid var(--col-border);
+  padding: 0 var(--space-sm);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none; /* Firefox */
+}
+
+.tabbar::-webkit-scrollbar { display: none; }
+
+/* Individual tab */
+.tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-md);
+  height: 34px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: var(--radius-tab) var(--radius-tab) 0 0;
+  background: var(--col-surface-2);
+  color: var(--col-muted);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  max-width: 160px;
+  transition: background var(--duration) var(--ease-out),
+              color var(--duration) var(--ease-out),
+              border-color var(--duration) var(--ease-out),
+              box-shadow var(--duration) var(--ease-out);
+  position: relative;
+}
+
+.tab:hover:not(.tab--active) {
+  background: var(--col-tab-hover);
+  color: var(--col-subtle);
+}
+
+.tab--active {
+  background: var(--col-surface);
+  color: var(--col-text);
+  border-color: var(--col-border);
+  border-bottom-color: var(--col-surface);
+  box-shadow: 0 -2px 0 0 var(--col-accent) inset;
+  z-index: 1;
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--col-accent-lt);
+  outline-offset: -2px;
+}
+
+/* Tab title text */
+.tab__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100px;
+}
+
+/* Tab index badge */
+.tab__index {
+  font-size: 0.65rem;
+  color: var(--col-accent-lt);
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+/* Tab close button */
+.tab__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px; height: 16px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--col-muted);
+  cursor: pointer;
+  opacity: 0;
+  flex-shrink: 0;
+  transition: opacity var(--duration), background var(--duration), color var(--duration);
+  font-size: 12px;
+  line-height: 1;
+  padding: 0;
+}
+
+.tab:hover .tab__close,
+.tab--active .tab__close {
+  opacity: 1;
+}
+
+.tab__close:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--col-danger);
+}
+
+/* New tab button */
+.tab--new {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  margin-bottom: 2px;
+  border: 1px solid var(--col-border-soft);
+  justify-content: center;
+  flex-shrink: 0;
+  background: transparent;
+  color: var(--col-muted);
+}
+
+.tab--new:hover {
+  background: var(--col-surface-2);
+  color: var(--col-accent-lt);
+  border-color: var(--col-accent);
+}
+
+/* ── Editor Area ──────────────────────────────────────────────────────────── */
+.editor-area {
+  display: flex;
+  flex: 1;
+  background: var(--col-bg);
+  overflow: hidden;
+}
+
+.editor {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  padding: var(--space-lg) var(--space-lg) var(--space-md);
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  color: var(--col-text);
+  font-family: var(--font-editor);
+  font-size: var(--font-size-editor);
+  line-height: var(--line-height-editor);
+  caret-color: var(--col-accent-lt);
+
+  /* field-sizing: content is not used here because we want fixed full-area sizing;
+     instead we use height: 100% fill. */
+
+  /* Custom scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: var(--col-border) transparent;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.editor::placeholder {
+  color: var(--col-border);
+  font-style: italic;
+}
+
+.editor::-webkit-scrollbar { width: 5px; }
+.editor::-webkit-scrollbar-track { background: transparent; }
+.editor::-webkit-scrollbar-thumb {
+  background: var(--col-border);
+  border-radius: 99px;
+}
+.editor::-webkit-scrollbar-thumb:hover { background: var(--col-muted); }
+
+/* Selection highlight */
+.editor::selection {
+  background: oklch(55% 0.24 293 / 35%);
+}
+
+/* ── Status Bar ───────────────────────────────────────────────────────────── */
+.statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--statusbar-h);
+  background: var(--col-surface);
+  border-top: 1px solid var(--col-border);
+  padding: 0 var(--space-md);
+  font-size: var(--font-size-sm);
+  color: var(--col-muted);
+  gap: var(--space-md);
+}
+
+.statusbar__shortcuts {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 5px;
+  background: var(--col-surface-2);
+  border: 1px solid var(--col-border);
+  border-radius: 3px;
+  font-family: var(--font-editor);
+  font-size: 0.65rem;
+  color: var(--col-subtle);
+  line-height: 1.4;
+  box-shadow: 0 1px 0 var(--col-border);
+}
+
+.shortcut-label {
+  color: var(--col-muted);
+  font-size: 0.65rem;
+  margin-right: var(--space-sm);
+}
+
+.statusbar__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex-shrink: 0;
+}
+
+/* Save status indicator */
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--font-size-sm);
+  transition: color var(--duration);
+}
+
+.status-icon {
+  flex-shrink: 0;
+}
+
+.status-indicator--saved   { color: var(--col-success); }
+.status-indicator--saving  { color: var(--col-warn); }
+.status-indicator--error   { color: var(--col-danger); }
+
+@keyframes blink-saving {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+.status-indicator--saving .status-icon {
+  animation: blink-saving 0.8s ease-in-out infinite;
+}
+
+.status-pos,
+.status-tabs {
+  color: var(--col-muted);
+  font-family: var(--font-editor);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+
+/* ── Inline tab rename input ─────────────────────────────────────────────── */
+.tab-rename-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--col-accent);
+  color: var(--col-text);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  width: 90px;
+  outline: none;
+  padding: 0 2px;
+}
+
+/* ── Fade-in animation for new tabs ──────────────────────────────────────── */
+@keyframes tab-appear {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.tab--entering {
+  animation: tab-appear 200ms var(--ease-out) forwards;
+}
+
+/* ── Reduced motion ───────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .titlebar__logo,
+  .status-indicator--saving .status-icon,
+  .tab--entering {
+    animation: none;
+  }
+
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Focus styles for accessibility ─────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--col-accent-lt);
+  outline-offset: 2px;
+}
+
+button:focus:not(:focus-visible) {
+  outline: none;
+}

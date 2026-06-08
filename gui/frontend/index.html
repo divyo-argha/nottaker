@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="nottaker — lightweight multi-tab auto-saving scratchpad" />
+  <title>nottaker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Screen reader heading (visually hidden) -->
+  <h1 class="sr-only">nottaker — scratchpad workspace</h1>
+
+  <!-- Draggable title bar (frameless window) -->
+  <header id="titlebar" class="titlebar" aria-label="Window title bar">
+    <div class="titlebar__drag-region" style="--wails-draggable: drag">
+      <span class="titlebar__logo" aria-hidden="true">✦</span>
+      <span class="titlebar__name">nottaker</span>
+    </div>
+    <div class="titlebar__controls" role="group" aria-label="Window controls">
+      <button id="btn-minimize" class="wctrl wctrl--minimize" title="Minimize" aria-label="Minimize window">
+        <svg width="10" height="2" viewBox="0 0 10 2" fill="currentColor" aria-hidden="true"><rect width="10" height="2"/></svg>
+      </button>
+      <button id="btn-maximize" class="wctrl wctrl--maximize" title="Maximize" aria-label="Maximize window">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="1" y="1" width="8" height="8"/></svg>
+      </button>
+      <button id="btn-close" class="wctrl wctrl--close" title="Close" aria-label="Close window">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M1 1L9 9M9 1L1 9"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Tab bar -->
+  <nav id="tabbar" class="tabbar" role="tablist" aria-label="Scratchpad tabs">
+    <!-- Tabs injected by main.js -->
+    <button id="btn-new-tab" class="tab tab--new" title="New tab (Ctrl+N)" aria-label="Create new tab">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <line x1="7" y1="1" x2="7" y2="13"/><line x1="1" y1="7" x2="13" y2="7"/>
+      </svg>
+    </button>
+  </nav>
+
+  <!-- Editor area -->
+  <main id="editor-area" class="editor-area" role="main">
+    <textarea
+      id="editor"
+      class="editor"
+      spellcheck="false"
+      autocorrect="off"
+      autocapitalize="off"
+      autocomplete="off"
+      aria-label="Scratchpad editor"
+      aria-multiline="true"
+      placeholder="Start typing…"
+    ></textarea>
+  </main>
+
+  <!-- Status bar -->
+  <footer id="statusbar" class="statusbar" role="contentinfo" aria-label="Status bar">
+    <div class="statusbar__shortcuts" aria-label="Keyboard shortcuts">
+      <kbd class="kbd">Ctrl</kbd><span>+</span><kbd class="kbd">N</kbd><span class="shortcut-label">new</span>
+      <kbd class="kbd">Ctrl</kbd><span>+</span><kbd class="kbd">W</kbd><span class="shortcut-label">close</span>
+      <kbd class="kbd">Ctrl</kbd><span>+</span><kbd class="kbd">Tab</kbd><span class="shortcut-label">next tab</span>
+      <kbd class="kbd">Ctrl</kbd><span>+</span><kbd class="kbd">Shift</kbd><span>+</span><kbd class="kbd">Tab</kbd><span class="shortcut-label">prev tab</span>
+    </div>
+    <div class="statusbar__meta" aria-live="polite" aria-atomic="true">
+      <span id="status-save" class="status-indicator status-indicator--saved" aria-label="Save status">
+        <svg class="status-icon" width="8" height="8" viewBox="0 0 8 8" aria-hidden="true"><circle cx="4" cy="4" r="4"/></svg>
+        <span id="status-save-text">saved</span>
+      </span>
+      <span id="status-pos" class="status-pos" aria-label="Cursor position">Ln 1, Col 1</span>
+      <span id="status-tabs" class="status-tabs" aria-label="Tab count">1 tab</span>
+    </div>
+  </footer>
+
+  <!-- Wails runtime (injected automatically) -->
+  <script src="/wails/ipc.js"></script>
+  <script src="/wails/runtime.js"></script>
+  <script src="main.js" type="module"></script>
+</body>
+</html>
