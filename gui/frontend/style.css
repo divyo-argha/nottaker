@@ -96,8 +96,10 @@ body {
 }
 
 .titlebar__logo {
-  font-size: 1rem;
-  color: var(--col-accent-lt);
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  border-radius: 50%;
   filter: drop-shadow(0 0 8px var(--col-accent));
   animation: pulse-glow 3s ease-in-out infinite;
 }
