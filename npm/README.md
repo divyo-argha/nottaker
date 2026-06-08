@@ -13,7 +13,7 @@
     <a href="https://github.com/divyo-argha/octonote/releases"><img src="https://img.shields.io/github/v/release/divyo-argha/octonote?style=flat-square&color=00FFAA&label=latest" alt="Latest Release" /></a>
     <a href="https://www.npmjs.com/package/octonote"><img src="https://img.shields.io/npm/v/octonote?style=flat-square&color=CB3837&logo=npm&logoColor=white&label=npm" alt="npm" /></a>
     <a href="https://www.npmjs.com/package/octonote"><img src="https://img.shields.io/npm/dt/octonote?style=flat-square&color=CB3837&logo=npm&logoColor=white&label=total%20downloads" alt="total downloads" /></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-22c55e?style=flat-square" alt="MIT" /></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue?style=flat-square" alt="Apache 2.0" /></a>
   </p>
 
   <p>
@@ -149,4 +149,4 @@ Notes are saved as `state.json` inside your platform's standard configuration di
 
 ## 📄 License
 
-MIT — see [LICENSE](https://github.com/divyo-argha/octonote/blob/main/LICENSE) for details.
+Apache License, Version 2.0 — see [LICENSE](https://github.com/divyo-argha/octonote/blob/main/LICENSE) for details.

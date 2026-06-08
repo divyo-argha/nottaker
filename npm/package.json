@@ -19,7 +19,7 @@
     "type": "git",
     "url": "git+https://github.com/divyo-argha/octonote.git"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "author": "octoNote contributors",
   "bin": {
     "octonote": "bin/octonote.js"
