@@ -11,7 +11,7 @@ const { promisify } = require('util');
 const streamPipeline = promisify(pipeline);
 
 const REPO_OWNER   = 'divyo-argha';
-const REPO_NAME    = 'nottaker';
+const REPO_NAME    = 'octonote';
 const VERSION      = require('../package.json').version;
 const RELEASE_TAG  = `v${VERSION}`;
 const GITHUB_BASE  = `https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${RELEASE_TAG}`;
@@ -19,17 +19,17 @@ const GITHUB_BASE  = `https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/dow
 const BIN_DIR = path.join(__dirname, '..', 'bin', 'binaries');
 
 const PLATFORM_MAP = {
-  'darwin-arm64': 'nottaker-darwin-arm64',
-  'darwin-x64':   'nottaker-darwin-amd64',
-  'linux-arm64':  'nottaker-linux-arm64',
-  'linux-x64':    'nottaker-linux-amd64',
-  'win32-x64':    'nottaker-windows-amd64.exe',
-  'win32-arm64':  'nottaker-windows-arm64.exe',
+  'darwin-arm64': 'octonote-darwin-arm64',
+  'darwin-x64':   'octonote-darwin-amd64',
+  'linux-arm64':  'octonote-linux-arm64',
+  'linux-x64':    'octonote-linux-amd64',
+  'win32-x64':    'octonote-windows-amd64.exe',
+  'win32-arm64':  'octonote-windows-arm64.exe',
 };
 
-function log(msg)  { process.stdout.write(`[nottaker] ${msg}\n`); }
-function warn(msg) { process.stderr.write(`[nottaker] WARN: ${msg}\n`); }
-function fail(msg) { process.stderr.write(`[nottaker] ERROR: ${msg}\n`); process.exit(1); }
+function log(msg)  { process.stdout.write(`[octonote] ${msg}\n`); }
+function warn(msg) { process.stderr.write(`[octonote] WARN: ${msg}\n`); }
+function fail(msg) { process.stderr.write(`[octonote] ERROR: ${msg}\n`); process.exit(1); }
 
 function followRedirects(url, maxRedirects = 10) {
   return new Promise((resolve, reject) => {
@@ -37,7 +37,7 @@ function followRedirects(url, maxRedirects = 10) {
       if (remaining <= 0) return reject(new Error('Too many redirects'));
 
       const lib = currentUrl.startsWith('https') ? https : http;
-      const req = lib.get(currentUrl, { headers: { 'User-Agent': 'nottaker-installer/1.0' } }, res => {
+      const req = lib.get(currentUrl, { headers: { 'User-Agent': 'octonote-installer/1.0' } }, res => {
         if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
           res.resume();
           attempt(res.headers.location, remaining - 1);
@@ -70,7 +70,7 @@ async function download(url, destPath) {
     received += chunk.length;
     if (totalBytes > 0) {
       const pct = Math.round((received / totalBytes) * 100);
-      process.stdout.write(`\r[nottaker]   ${pct}% (${formatBytes(received)} / ${formatBytes(totalBytes)})   `);
+      process.stdout.write(`\r[octonote]   ${pct}% (${formatBytes(received)} / ${formatBytes(totalBytes)})   `);
     }
   });
 
@@ -97,7 +97,7 @@ async function main() {
 
   if (!binary) {
     warn(`Platform "${key}" is not pre-built. Skipping binary download.`);
-    warn('You can build from source: go build ./tui/ → rename to nottaker');
+    warn('You can build from source: go build ./tui/ → rename to octonote');
     process.exit(0);
   }
 
@@ -109,20 +109,20 @@ async function main() {
   if (fs.existsSync(destPath)) {
     log(`Binary already present: ${destPath}`);
     ensureExecutable(destPath);
-    log('nottaker is ready. Run: nottaker');
+    log('octonote is ready. Run: octonote');
     return;
   }
 
   try {
     await download(downloadUrl, destPath);
     ensureExecutable(destPath);
-    log(`✓ Installed nottaker ${VERSION} for ${key}`);
-    log('Run: nottaker');
+    log(`✓ Installed octonote ${VERSION} for ${key}`);
+    log('Run: octonote');
   } catch (err) {
     warn(`Could not download binary: ${err.message}`);
     warn('To build from source:');
-    warn('  git clone https://github.com/nottaker/nottaker');
-    warn('  cd nottaker && go build -o bin/nottaker ./tui/');
+    warn('  git clone https://github.com/nottaker/octonote');
+    warn('  cd octonote && go build -o bin/octonote ./tui/');
   }
 }
 

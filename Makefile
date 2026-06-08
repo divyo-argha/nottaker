@@ -1,9 +1,9 @@
 # nottaker — Build System
 # Targets: tui, gui, all, cross, clean
 
-BINARY_NAME   := nottaker
-GUI_BINARY    := nottaker-gui
-MODULE        := github.com/nottaker/nottaker
+BINARY_NAME   := octonote
+GUI_BINARY    := octonote-gui
+MODULE        := github.com/nottaker/octonote
 VERSION       := 1.0.0
 LDFLAGS       := -s -w -X main.version=$(VERSION)
 

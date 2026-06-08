@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-REPO="divyo-argha/nottaker"
+REPO="divyo-argha/octonote"
 VERSION="1.0.0"
 
 # Detect OS and Arch
@@ -15,23 +15,23 @@ case "$ARCH" in
 esac
 
 case "$OS" in
-    darwin)  BINARY="nottaker-darwin-$ARCH" ;;
-    linux)   BINARY="nottaker-linux-$ARCH" ;;
+    darwin)  BINARY="octonote-darwin-$ARCH" ;;
+    linux)   BINARY="octonote-linux-$ARCH" ;;
     *) echo "Unsupported OS: $OS"; exit 1 ;;
 esac
 
 URL="https://github.com/$REPO/releases/download/v$VERSION/$BINARY"
 INSTALL_DIR="/usr/local/bin"
 
-echo "Downloading nottaker CLI from $URL..."
-curl -sSfL "$URL" -o nottaker
-chmod +x nottaker
+echo "Downloading octonote CLI from $URL..."
+curl -sSfL "$URL" -o octonote
+chmod +x octonote
 
 if [ -w "$INSTALL_DIR" ]; then
-    mv nottaker "$INSTALL_DIR/nottaker"
+    mv octonote "$INSTALL_DIR/octonote"
 else
     echo "Requires sudo permission to install to $INSTALL_DIR:"
-    sudo mv nottaker "$INSTALL_DIR/nottaker"
+    sudo mv octonote "$INSTALL_DIR/octonote"
 fi
 
-echo "nottaker CLI successfully installed to $INSTALL_DIR/nottaker"
+echo "octonote CLI successfully installed to $INSTALL_DIR/octonote"

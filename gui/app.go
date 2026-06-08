@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nottaker/nottaker/core"
+	"github.com/nottaker/octonote/core"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 

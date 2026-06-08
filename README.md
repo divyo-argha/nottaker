@@ -1,13 +1,13 @@
-# nottaker
+# octoNote
 
 > **A lightning-fast, crash-proof, multi-tab scratchpad for your terminal and desktop.**
 
-**nottaker** is a radically simple text workspace designed for ephemeral notes, scratchpad ideas, and quick to-dos. It offers an identical experience whether you are in the terminal (TUI) or using the desktop application (GUI). Built completely in Go, nottaker completely eliminates the concept of "saving". Every keystroke is instantly and safely committed to disk using an atomic file-write process, meaning a crash or accidental close never loses your work.
+**octoNote** is a radically simple text workspace designed for ephemeral notes, scratchpad ideas, and quick to-dos. It offers an identical experience whether you are in the terminal (TUI) or using the desktop application (GUI). Built completely in Go, octoNote completely eliminates the concept of "saving". Every keystroke is instantly and safely committed to disk using an atomic file-write process, meaning a crash or accidental close never loses your work.
 
 It works completely across all platforms out of the box (macOS, Linux, and Windows) for both the Terminal UI and the Desktop GUI.
 
 ```
-✦ nottaker
+✦ octonote
  1: scratch   2: ideas   3: todo   [+]
 ╭──────────────────────────────────────────╮
 │ Start typing…                            │
@@ -22,7 +22,7 @@ It works completely across all platforms out of the box (macOS, Linux, and Windo
 - **Multi-tab workspace** — create, destroy, and cycle through tabs instantly
 - **Auto-save on every keystroke** — no Ctrl+S, no lost work, ever
 - **Crash-safe persistence** — atomic temp-file + rename writes
-- **Platform-aware storage** — `~/Library/Application Support/nottaker/` on macOS, `~/.config/nottaker/` on Linux, `%AppData%/nottaker/` on Windows
+- **Platform-aware storage** — `~/Library/Application Support/octonote/` on macOS, `~/.config/octonote/` on Linux, `%AppData%/octonote/` on Windows
 - **Two interfaces, one backend** — TUI (Bubble Tea) and GUI (Wails) share identical Go persistence code
 
 ---
@@ -30,7 +30,7 @@ It works completely across all platforms out of the box (macOS, Linux, and Windo
 ## Project Structure
 
 ```
-nottaker/
+octonote/
 ├── core/storage.go        # Shared persistence layer (Tab, State, async save)
 ├── tui/main.go            # Bubble Tea TUI application
 ├── gui/
@@ -44,7 +44,7 @@ nottaker/
 │       └── main.js
 ├── npm/
 │   ├── package.json       # npm distribution config
-│   ├── bin/nottaker.js    # CLI shim for npx
+│   ├── bin/octonote.js    # CLI shim for npx
 │   └── scripts/install.js # Platform binary downloader
 └── Makefile
 ```
@@ -55,24 +55,24 @@ nottaker/
 
 ### One-Line Installers
 
-The easiest way to get `nottaker` is to use our installation scripts, which download the pre-compiled binary for your system.
+The easiest way to get `octoNote` is to use our installation scripts, which download the pre-compiled binary for your system.
 
 **macOS / Linux (Bash)**
 ```bash
 # Install TUI + GUI
-curl -sSfL https://raw.githubusercontent.com/divyo-argha/nottaker/main/scripts/install-gui.sh | sh
+curl -sSfL https://raw.githubusercontent.com/divyo-argha/octonote/main/scripts/install-gui.sh | sh
 
 # Install TUI only
-curl -sSfL https://raw.githubusercontent.com/divyo-argha/nottaker/main/scripts/install-cli.sh | sh
+curl -sSfL https://raw.githubusercontent.com/divyo-argha/octonote/main/scripts/install-cli.sh | sh
 ```
 
 **Windows (PowerShell)**
 ```powershell
 # Install TUI + GUI
-iwr -useb https://raw.githubusercontent.com/divyo-argha/nottaker/main/scripts/install-gui.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/divyo-argha/octonote/main/scripts/install-gui.ps1 | iex
 
 # Install TUI only
-iwr -useb https://raw.githubusercontent.com/divyo-argha/nottaker/main/scripts/install-cli.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/divyo-argha/octonote/main/scripts/install-cli.ps1 | iex
 ```
 
 ### NPM / NPX (TUI Only)
@@ -81,15 +81,15 @@ For Node.js users, the TUI is packaged as an npm executable. When installed, a `
 
 ```bash
 # Install globally
-npm install -g nottaker
+npm install -g octonote
 
 # Run from anywhere
-nottaker
+octonote
 ```
 
 Alternatively, run without installing:
 ```bash
-npx nottaker
+npx octonote
 ```
 
 ### Build from Source
@@ -101,7 +101,7 @@ npx nottaker
 ```bash
 # Build the TUI
 make tui
-./nottaker
+./octonote
 
 # Build the GUI Desktop App
 # Output goes to gui/build/bin/
@@ -121,22 +121,15 @@ make gui
 | `Ctrl+1…9` | Jump to tab by number |
 | `Ctrl+C` *(TUI)* | Quit |
 
-### GUI Only
-| Action | How |
-|---|---|
-| Rename tab | Double-click tab title, Enter to confirm, Esc to cancel |
-
----
-
 ## Persistence
 
 State is stored as `state.json` in your platform config directory:
 
 | Platform | Path |
 |---|---|
-| macOS | `~/Library/Application Support/nottaker/state.json` |
-| Linux | `~/.config/nottaker/state.json` |
-| Windows | `%APPDATA%\nottaker\state.json` |
+| macOS | `~/Library/Application Support/octonote/state.json` |
+| Linux | `~/.config/octonote/state.json` |
+| Windows | `%APPDATA%\octonote\state.json` |
 
 Writes are **atomic** — a `.tmp` file is written first, then renamed, so a crash mid-write never corrupts your data.
 

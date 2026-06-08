@@ -1,4 +1,4 @@
-module github.com/nottaker/nottaker
+module github.com/nottaker/octonote
 
 go 1.22.0
 

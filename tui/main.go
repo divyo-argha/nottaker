@@ -10,7 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/nottaker/nottaker/core"
+	"github.com/nottaker/octonote/core"
 )
 
 const (
@@ -215,7 +215,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 	if m.quitting {
-		return styleTitle.Render("nottaker — bye! 👋") + "\n"
+		return styleTitle.Render("octonote — bye! 👋") + "\n"
 	}
 	if m.width == 0 {
 		return "Loading…"
@@ -223,7 +223,7 @@ func (m model) View() string {
 
 	var b strings.Builder
 
-	title := styleTitle.Render("✦ nottaker")
+	title := styleTitle.Render("✦ octonote")
 	tabCount := styleTabCount.Render(fmt.Sprintf(" %d tab(s)", len(m.state.Tabs)))
 	b.WriteString(lipgloss.JoinHorizontal(lipgloss.Left, title, tabCount))
 	b.WriteString("\n")
@@ -405,14 +405,14 @@ func visibleLen(s string) int {
 func main() {
 	s, err := core.NewStorage()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "nottaker: %v\n", err)
+		fmt.Fprintf(os.Stderr, "octonote: %v\n", err)
 		os.Exit(1)
 	}
 	defer s.Close()
 
 	st, err := s.Load()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "nottaker: load state: %v\n", err)
+		fmt.Fprintf(os.Stderr, "octonote: load state: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -424,7 +424,7 @@ func main() {
 	)
 
 	if _, err := p.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "nottaker: %v\n", err)
+		fmt.Fprintf(os.Stderr, "octonote: %v\n", err)
 		os.Exit(1)
 	}
 }

@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-REPO="divyo-argha/nottaker"
+REPO="divyo-argha/octonote"
 VERSION="1.0.0"
 
 # Detect OS and Arch
@@ -16,12 +16,12 @@ esac
 
 case "$OS" in
     darwin)  
-        CLI_BINARY="nottaker-darwin-$ARCH"
-        GUI_BINARY="nottaker-gui-darwin-$ARCH"
+        CLI_BINARY="octonote-darwin-$ARCH"
+        GUI_BINARY="octonote-gui-darwin-$ARCH"
         ;;
     linux)   
-        CLI_BINARY="nottaker-linux-$ARCH"
-        GUI_BINARY="nottaker-gui-linux-$ARCH"
+        CLI_BINARY="octonote-linux-$ARCH"
+        GUI_BINARY="octonote-gui-linux-$ARCH"
         ;;
     *) echo "Unsupported OS: $OS"; exit 1 ;;
 esac
@@ -31,25 +31,25 @@ GUI_URL="https://github.com/$REPO/releases/download/v$VERSION/$GUI_BINARY"
 
 INSTALL_DIR="/usr/local/bin"
 
-echo "Downloading nottaker CLI & GUI..."
+echo "Downloading octonote CLI & GUI..."
 
 # Download CLI
-curl -sSfL "$CLI_URL" -o nottaker
-chmod +x nottaker
+curl -sSfL "$CLI_URL" -o octonote
+chmod +x octonote
 
 # Download GUI
-curl -sSfL "$GUI_URL" -o nottaker-gui
-chmod +x nottaker-gui
+curl -sSfL "$GUI_URL" -o octonote-gui
+chmod +x octonote-gui
 
 echo "Installing to $INSTALL_DIR (you may be prompted for your password)..."
 if [ -w "$INSTALL_DIR" ]; then
-    mv nottaker "$INSTALL_DIR/nottaker"
-    mv nottaker-gui "$INSTALL_DIR/nottaker-gui"
+    mv octonote "$INSTALL_DIR/octonote"
+    mv octonote-gui "$INSTALL_DIR/octonote-gui"
 else
-    sudo mv nottaker "$INSTALL_DIR/nottaker"
-    sudo mv nottaker-gui "$INSTALL_DIR/nottaker-gui"
+    sudo mv octonote "$INSTALL_DIR/octonote"
+    sudo mv octonote-gui "$INSTALL_DIR/octonote-gui"
 fi
 
 echo "✓ Installation complete!"
-echo "Run 'nottaker' for the terminal interface."
-echo "Run 'nottaker-gui' for the desktop application."
+echo "Run 'octonote' for the terminal interface."
+echo "Run 'octonote-gui' for the desktop application."

@@ -1,6 +1,6 @@
 {
-  "name": "nottaker",
-  "outputfilename": "nottaker-gui",
+  "name": "octoNote",
+  "outputfilename": "octonote",
   "frontend:install": "echo no-install",
   "frontend:build": "echo no-build",
   "frontend:dev:watcher": "",
@@ -8,11 +8,11 @@
   "wailsVersion": "v2.9.1",
   "version": "2",
   "info": {
-    "productName": "nottaker",
+    "productName": "octoNote",
     "productVersion": "1.0.0",
-    "productIdentifier": "io.nottaker.app",
+    "productIdentifier": "io.octonote.app",
     "description": "Lightweight multi-tab auto-saving scratchpad",
-    "copyright": "© 2024 nottaker contributors",
+    "copyright": "© 2024 octoNote contributors",
     "comments": "Built with Wails + Go"
   },
   "nsisType": "single",

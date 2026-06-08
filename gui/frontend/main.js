@@ -22,7 +22,7 @@ async function init() {
     renderTabs();
     loadActiveTabIntoEditor();
   } catch (err) {
-    console.error('nottaker: failed to load state', err);
+    console.error('octoNote: failed to load state', err);
     renderFallback();
   }
 
@@ -114,7 +114,7 @@ async function flushSave() {
     await window.go.main.App.SaveTab(idx, body, cursorLine);
     setSaveStatus('saved');
   } catch (err) {
-    console.error('nottaker: save failed', err);
+    console.error('octoNote: save failed', err);
     setSaveStatus('error');
   } finally {
     saving = false;
@@ -134,7 +134,7 @@ async function switchTab(idx) {
     renderTabs();
     loadActiveTabIntoEditor();
   } catch (err) {
-    console.error('nottaker: switch tab failed', err);
+    console.error('octoNote: switch tab failed', err);
   }
 }
 
@@ -147,7 +147,7 @@ async function newTab() {
     renderTabs();
     loadActiveTabIntoEditor();
   } catch (err) {
-    console.error('nottaker: new tab failed', err);
+    console.error('octoNote: new tab failed', err);
   }
 }
 
@@ -157,7 +157,7 @@ async function closeTab(idx) {
     renderTabs();
     loadActiveTabIntoEditor();
   } catch (err) {
-    console.error('nottaker: close tab failed', err);
+    console.error('octoNote: close tab failed', err);
   }
 }
 

@@ -1,5 +1,5 @@
 {
-  "name": "nottaker",
+  "name": "octonote",
   "version": "1.0.0",
   "description": "Lightweight multi-tab auto-saving scratchpad — TUI for your terminal",
   "keywords": [
@@ -11,18 +11,18 @@
     "cli",
     "go"
   ],
-  "homepage": "https://github.com/divyo-argha/nottaker#readme",
+  "homepage": "https://github.com/divyo-argha/octonote#readme",
   "bugs": {
-    "url": "https://github.com/divyo-argha/nottaker/issues"
+    "url": "https://github.com/divyo-argha/octonote/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/divyo-argha/nottaker.git"
+    "url": "git+https://github.com/divyo-argha/octonote.git"
   },
   "license": "MIT",
-  "author": "nottaker contributors",
+  "author": "octoNote contributors",
   "bin": {
-    "nottaker": "bin/nottaker.js"
+    "octonote": "bin/octonote.js"
   },
   "scripts": {
     "postinstall": "node scripts/install.js"

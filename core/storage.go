@@ -36,9 +36,9 @@ type Storage struct {
 func StateDir() (string, error) {
 	base, err := os.UserConfigDir()
 	if err != nil {
-		return "", fmt.Errorf("nottaker: cannot determine config dir: %w", err)
+		return "", fmt.Errorf("octonote: cannot determine config dir: %w", err)
 	}
-	return filepath.Join(base, "nottaker"), nil
+	return filepath.Join(base, "octonote"), nil
 }
 
 func NewStorage() (*Storage, error) {
@@ -47,7 +47,7 @@ func NewStorage() (*Storage, error) {
 		return nil, err
 	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return nil, fmt.Errorf("nottaker: cannot create config dir %s: %w", dir, err)
+		return nil, fmt.Errorf("octonote: cannot create config dir %s: %w", dir, err)
 	}
 
 	s := &Storage{
@@ -67,7 +67,7 @@ func (s *Storage) Load() (State, error) {
 		return defaultState(), nil
 	}
 	if err != nil {
-		return State{}, fmt.Errorf("nottaker: read state: %w", err)
+		return State{}, fmt.Errorf("octonote: read state: %w", err)
 	}
 
 	var st State

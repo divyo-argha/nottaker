@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/nottaker/nottaker/core"
+	"github.com/nottaker/octonote/core"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
@@ -17,14 +17,14 @@ import (
 func main() {
 	storage, err := core.NewStorage()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "nottaker gui: storage init: %v\n", err)
+		fmt.Fprintf(os.Stderr, "octoNote gui: storage init: %v\n", err)
 		os.Exit(1)
 	}
 
 	app := NewApp(storage)
 
 	err = wails.Run(&options.App{
-		Title:     "nottaker",
+		Title:     "octoNote",
 		Width:     1024,
 		Height:    720,
 		MinWidth:  720,
@@ -38,7 +38,7 @@ func main() {
 		},
 
 		SingleInstanceLock: &options.SingleInstanceLock{
-			UniqueId:               "io.nottaker.app.singleinstance",
+			UniqueId:               "io.octonote.app.singleinstance",
 			OnSecondInstanceLaunch: app.onSecondInstanceLaunch,
 		},
 
@@ -52,7 +52,7 @@ func main() {
 			WebviewIsTransparent: false,
 			WindowIsTranslucent:  false,
 			About: &mac.AboutInfo{
-				Title:   "nottaker",
+				Title:   "octoNote",
 				Message: "Lightweight multi-tab scratchpad.\n\nBuilt with Wails & Go.",
 			},
 		},
@@ -67,7 +67,7 @@ func main() {
 	})
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "nottaker gui: %v\n", err)
+		fmt.Fprintf(os.Stderr, "octoNote gui: %v\n", err)
 		os.Exit(1)
 	}
 }
