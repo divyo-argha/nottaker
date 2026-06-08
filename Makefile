@@ -20,6 +20,9 @@ PLATFORMS := \
 	linux/arm64  \
 	windows/amd64
 
+# Wails path helper
+WAILS := $(shell which wails 2>/dev/null || echo $(shell go env GOPATH)/bin/wails)
+
 .PHONY: all tui gui cross clean deps fmt vet test help
 
 ## Default: build both TUI and GUI
@@ -34,7 +37,7 @@ tui: deps
 ## Build the Wails GUI desktop app
 gui: deps
 	@echo "→ Building Wails GUI…"
-	cd $(GUI_DIR) && wails build -clean -ldflags "$(LDFLAGS)"
+	cd $(GUI_DIR) && $(WAILS) build -clean -ldflags "$(LDFLAGS)"
 	@echo "✓ Wails build complete. Output: gui/build/bin/"
 
 ## Run the TUI in development mode (live reload via air, if installed)
@@ -43,7 +46,7 @@ dev-tui:
 
 ## Run the Wails GUI in development mode (hot reload)
 dev-gui:
-	cd $(GUI_DIR) && wails dev
+	cd $(GUI_DIR) && $(WAILS) dev
 
 ## Cross-compile TUI for all release platforms and copy into npm/bin/binaries
 cross: deps
