@@ -1,6 +1,10 @@
 # nottaker
 
-> Lightweight multi-tab auto-saving scratchpad — TUI + GUI, built in Go.
+> **A lightning-fast, crash-proof, multi-tab scratchpad for your terminal and desktop.**
+
+**nottaker** is a radically simple text workspace designed for ephemeral notes, scratchpad ideas, and quick to-dos. It offers an identical experience whether you are in the terminal (TUI) or using the desktop application (GUI). Built completely in Go, nottaker completely eliminates the concept of "saving". Every keystroke is instantly and safely committed to disk using an atomic file-write process, meaning a crash or accidental close never loses your work.
+
+It works completely across all platforms out of the box (macOS, Linux, and Windows) for both the Terminal UI and the Desktop GUI.
 
 ```
 ✦ nottaker
@@ -47,48 +51,62 @@ nottaker/
 
 ---
 
-## Quick Start
+## Installation
 
-### Prerequisites
+### One-Line Installers
 
-- Go 1.22+
-- [Wails v2](https://wails.io/docs/gettingstarted/installation) (for GUI only)
+The easiest way to get `nottaker` is to use our installation scripts, which download the pre-compiled binary for your system.
 
-### TUI
-
+**macOS / Linux (Bash)**
 ```bash
-# Build
-make tui
+# Install TUI + GUI
+curl -sSfL https://raw.githubusercontent.com/nottaker/nottaker/main/scripts/install-gui.sh | sh
 
-# Run
-./nottaker
-
-# Or run directly
-go run ./tui/
+# Install TUI only
+curl -sSfL https://raw.githubusercontent.com/nottaker/nottaker/main/scripts/install-cli.sh | sh
 ```
 
-### GUI Desktop App
+**Windows (PowerShell)**
+```powershell
+# Install TUI + GUI
+iwr -useb https://raw.githubusercontent.com/nottaker/nottaker/main/scripts/install-gui.ps1 | iex
 
-```bash
-# Install Wails CLI
-go install github.com/wailsapp/wails/v2/cmd/wails@latest
-
-# Build
-make gui
-# Output: gui/build/bin/nottaker-gui.app (macOS)
-
-# Development mode (hot reload)
-make dev-gui
+# Install TUI only
+iwr -useb https://raw.githubusercontent.com/nottaker/nottaker/main/scripts/install-cli.ps1 | iex
 ```
 
-### via npx (TUI only)
+### NPM / NPX (TUI Only)
 
+For Node.js users, the TUI is packaged as an npm executable. When installed, a `postinstall` script automatically fetches the correct pre-compiled Go binary for your exact OS and architecture.
+
+```bash
+# Install globally
+npm install -g nottaker
+
+# Run from anywhere
+nottaker
+```
+
+Alternatively, run without installing:
 ```bash
 npx nottaker
 ```
 
-> On first run, `postinstall` downloads the pre-compiled binary for your platform.
-> Requires internet access. Subsequent runs use the cached binary.
+### Build from Source
+
+**Prerequisites**
+- Go 1.22+
+- [Wails v2](https://wails.io/docs/gettingstarted/installation) (for GUI only)
+
+```bash
+# Build the TUI
+make tui
+./nottaker
+
+# Build the GUI Desktop App
+# Output goes to gui/build/bin/
+make gui
+```
 
 ---
 
