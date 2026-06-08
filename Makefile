@@ -1,4 +1,4 @@
-# nottaker — Build System
+# octonote — Build System
 # Targets: tui, gui, all, cross, clean
 
 BINARY_NAME   := octonote
@@ -82,7 +82,7 @@ test:
 ## Remove build artefacts
 clean:
 	rm -f $(BINARY_NAME) $(GUI_BINARY)
-	rm -f $(NPM_BIN_DIR)/nottaker-*
+	rm -f $(NPM_BIN_DIR)/octonote-*
 	cd $(GUI_DIR) && rm -rf build/
 	@echo "✓ Clean"
 

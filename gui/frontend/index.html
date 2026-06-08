@@ -12,7 +12,7 @@
 </head>
 <body>
   <!-- Screen reader heading (visually hidden) -->
-  <h1 class="sr-only">nottaker — scratchpad workspace</h1>
+  <h1 class="sr-only">octoNote — scratchpad workspace</h1>
 
   <!-- Draggable title bar (frameless window) -->
   <header id="titlebar" class="titlebar" aria-label="Window title bar">
@@ -110,14 +110,52 @@
 
       <!-- Host panel -->
       <div id="share-panel-host" class="share-panel" role="tabpanel" aria-labelledby="share-tab-host">
-        <p class="share-hint">Share the active tab with anyone running octonote. They'll enter this code to receive it instantly — no account needed.</p>
+        <p class="share-hint">Share your active tab directly with a peer — no account, no cloud storage.</p>
+
+        <!-- Step 1: Confirm who you're sharing with -->
         <div id="share-host-idle" class="share-host-section">
-          <button id="btn-generate-code" class="share-action-btn">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M1 4h14M1 8h10M1 12h6"/></svg>
+
+          <!-- Tab preview -->
+          <div class="share-preview" aria-label="Tab being shared">
+            <span class="share-preview__label">Sharing tab</span>
+            <span id="share-preview-title" class="share-preview__title">—</span>
+          </div>
+
+          <!-- Sender name -->
+          <label class="share-label" for="share-sender-name">
+            Your name
+            <span class="share-label-hint">(so they know it's you)</span>
+          </label>
+          <input
+            id="share-sender-name"
+            class="share-code-input"
+            type="text"
+            placeholder="e.g. Alice"
+            maxlength="32"
+            autocomplete="off"
+            spellcheck="false"
+            aria-label="Your name, shown to receiver"
+          />
+          <p class="share-name-note">
+            ⚠ Codes are one-time use and expire immediately. Only share the code with the intended person.
+          </p>
+
+          <!-- Big confirm button -->
+          <button id="btn-generate-code" class="share-confirm-btn">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="13" cy="3" r="2"/><circle cx="3" cy="8" r="2"/><circle cx="13" cy="13" r="2"/>
+              <line x1="4.93" y1="9.03" x2="11.07" y2="11.97"/><line x1="11.07" y1="4.03" x2="4.93" y2="6.97"/>
+            </svg>
             Generate Code &amp; Share
           </button>
         </div>
+
+        <!-- Step 2: Code display + waiting -->
         <div id="share-host-active" class="share-host-section" hidden>
+          <div id="share-sender-chip" class="share-sender-chip" hidden>
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 8a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-5.33 0-8 2.67-8 4v1h16v-1c0-1.33-2.67-4-8-4z"/></svg>
+            <span id="share-sender-chip-name"></span>
+          </div>
           <p class="share-label">Give this code to your peer:</p>
           <div class="share-code-display">
             <span id="share-code-value" class="share-code-value" aria-live="polite" aria-label="Share code">—</span>
@@ -128,6 +166,8 @@
           <p id="share-host-status" class="share-status share-status--waiting" aria-live="polite">⏳ Waiting for peer to connect…</p>
           <button id="btn-cancel-share" class="share-cancel-btn">Cancel</button>
         </div>
+
+        <!-- Step 3: Done -->
         <div id="share-host-done" class="share-host-section" hidden>
           <p class="share-status share-status--success" aria-live="polite">✅ Tab sent successfully!</p>
         </div>

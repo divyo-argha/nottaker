@@ -10,29 +10,35 @@ import (
 )
 
 // SharePayload is the JSON envelope sent through the wormhole.
-// It carries the tab title and its full body text.
+// It carries the tab title, body, and an optional human label for the sender.
 type SharePayload struct {
-	TabTitle string `json:"tab_title"`
-	Body     string `json:"body"`
-	Version  int    `json:"version"`
+	TabTitle    string `json:"tab_title"`
+	Body        string `json:"body"`
+	SenderLabel string `json:"sender_label,omitempty"` // e.g. "Alice" — purely informational
+	Version     int    `json:"version"`
 }
 
 // ShareResult is returned to callers after a successful receive.
 type ShareResult struct {
-	TabTitle string
-	Body     string
+	TabTitle    string
+	Body        string
+	SenderLabel string // empty string if the sender did not provide one
 }
 
 // ShareSend serialises the given tab and opens a Magic Wormhole.
+// senderLabel is an optional human-readable name for the sender (e.g. "Alice").
+// It is embedded in the encrypted payload and shown to the receiver as context.
+// Pass an empty string to omit it.
+//
 // It returns the human-friendly code (e.g. "7-crossover-alpha") immediately,
 // then blocks on the returned wait func until the peer has received the data.
-//
 // The caller should pass a cancellable ctx to abort waiting.
-func ShareSend(ctx context.Context, tab Tab) (code string, wait func() error, err error) {
+func ShareSend(ctx context.Context, tab Tab, senderLabel string) (code string, wait func() error, err error) {
 	payload := SharePayload{
-		TabTitle: tab.Title,
-		Body:     tab.Body,
-		Version:  1,
+		TabTitle:    tab.Title,
+		Body:        tab.Body,
+		SenderLabel: senderLabel,
+		Version:     1,
 	}
 	data, err := json.Marshal(payload)
 	if err != nil {
@@ -93,5 +99,14 @@ func ShareReceive(ctx context.Context, code string) (ShareResult, error) {
 	if title == "" {
 		title = "shared note"
 	}
-	return ShareResult{TabTitle: title, Body: payload.Body}, nil
+	// Prefix the tab title with the sender's label so the receiver immediately
+	// knows where the content came from, e.g. "From Alice · my-notes"
+	if payload.SenderLabel != "" {
+		title = "From " + payload.SenderLabel + " · " + title
+	}
+	return ShareResult{
+		TabTitle:    title,
+		Body:        payload.Body,
+		SenderLabel: payload.SenderLabel,
+	}, nil
 }

@@ -740,6 +740,116 @@ button:focus:not(:focus-visible) {
   border-color: var(--col-danger);
 }
 
+/* ── Tab preview pill ───────────────────────────────────────────────────────── */
+
+.share-preview {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: var(--col-bg);
+  border: 1px solid var(--col-border);
+  border-radius: var(--radius-sm);
+  padding: 8px var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.share-preview__label {
+  font-size: var(--font-size-sm);
+  color: var(--col-muted);
+  flex-shrink: 0;
+}
+
+.share-preview__title {
+  font-family: var(--font-editor);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--col-accent-lt);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Label hint & warning note ─────────────────────────────────────────────── */
+
+.share-label-hint {
+  font-size: 0.65rem;
+  color: var(--col-muted);
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+.share-name-note {
+  font-size: 0.68rem;
+  color: var(--col-muted);
+  margin: var(--space-sm) 0 var(--space-md);
+  line-height: 1.5;
+}
+
+/* ── Big confirm button (prominent, full-width) ─────────────────────────────── */
+
+.share-confirm-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: 12px var(--space-md);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--col-accent);
+  color: #fff;
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: background var(--duration) var(--ease-out),
+              box-shadow var(--duration) var(--ease-out),
+              transform var(--duration) var(--ease-out);
+  box-shadow: 0 4px 20px oklch(55% 0.24 293 / 35%);
+}
+
+.share-confirm-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.share-confirm-btn:hover {
+  background: var(--col-accent-lt);
+  box-shadow: 0 6px 28px oklch(55% 0.24 293 / 55%);
+  transform: translateY(-1px);
+}
+
+.share-confirm-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 12px oklch(55% 0.24 293 / 30%);
+}
+
+/* ── Sender identity chip (shown while waiting) ─────────────────────────────── */
+
+.share-sender-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: oklch(55% 0.24 293 / 15%);
+  border: 1px solid var(--col-accent);
+  border-radius: 99px;
+  padding: 3px 10px 3px 7px;
+  font-size: var(--font-size-sm);
+  color: var(--col-accent-lt);
+  font-weight: 500;
+  margin-bottom: var(--space-md);
+}
+
+.share-sender-chip[hidden] { display: none; }
+
+
+
 /* ── Guest code input ───────────────────────────────────────────────────────── */
 
 .share-input-row {

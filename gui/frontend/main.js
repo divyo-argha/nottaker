@@ -325,14 +325,18 @@ const sharePanelHost  = document.getElementById('share-panel-host');
 const sharePanelGuest = document.getElementById('share-panel-guest');
 
 // Host elements
-const shareHostIdle   = document.getElementById('share-host-idle');
-const shareHostActive = document.getElementById('share-host-active');
-const shareHostDone   = document.getElementById('share-host-done');
-const shareCodeValue  = document.getElementById('share-code-value');
-const btnCopyCode     = document.getElementById('btn-copy-code');
-const btnGenerateCode = document.getElementById('btn-generate-code');
-const btnCancelShare  = document.getElementById('btn-cancel-share');
-const shareHostStatus = document.getElementById('share-host-status');
+const shareHostIdle      = document.getElementById('share-host-idle');
+const shareHostActive    = document.getElementById('share-host-active');
+const shareHostDone      = document.getElementById('share-host-done');
+const shareCodeValue     = document.getElementById('share-code-value');
+const btnCopyCode        = document.getElementById('btn-copy-code');
+const btnGenerateCode    = document.getElementById('btn-generate-code');
+const btnCancelShare     = document.getElementById('btn-cancel-share');
+const shareHostStatus    = document.getElementById('share-host-status');
+const shareSenderName    = document.getElementById('share-sender-name');
+const sharePreviewTitle  = document.getElementById('share-preview-title');
+const shareSenderChip    = document.getElementById('share-sender-chip');
+const shareSenderChipName = document.getElementById('share-sender-chip-name');
 
 // Guest elements
 const shareGuestIdle    = document.getElementById('share-guest-idle');
@@ -346,9 +350,12 @@ const shareError        = document.getElementById('share-error');
 
 function openShareModal() {
   resetShareModal();
+  // Show which tab will be shared
+  const activeTab = state.tabs?.[state.active_index];
+  if (activeTab) sharePreviewTitle.textContent = activeTab.title || 'scratch';
   shareModal.removeAttribute('hidden');
   btnShare.classList.add('share-btn--active');
-  shareModal.querySelector('.share-modal__close').focus();
+  shareSenderName.focus();
 }
 
 function closeShareModal() {
@@ -367,6 +374,9 @@ function resetShareModal() {
   shareHostActive.setAttribute('hidden', '');
   shareHostDone.setAttribute('hidden', '');
   shareCodeValue.textContent = '—';
+  shareSenderName.value = '';
+  shareSenderChip.setAttribute('hidden', '');
+  shareSenderChipName.textContent = '';
   // Guest
   shareGuestIdle.removeAttribute('hidden');
   shareGuestWaiting.setAttribute('hidden', '');
@@ -403,14 +413,22 @@ shareTabGuest.addEventListener('click', () => switchShareTab('guest'));
 
 // ── Host: generate code ──────────────────────────────────────────────────────
 btnGenerateCode.addEventListener('click', async () => {
+  const label = shareSenderName.value.trim();
   shareError.setAttribute('hidden', '');
   shareHostIdle.setAttribute('hidden', '');
   shareHostActive.removeAttribute('hidden');
   shareCodeValue.textContent = 'opening wormhole…';
   shareHostStatus.textContent = '⏳ Connecting to relay…';
+  // Show sender chip if a name was entered
+  if (label) {
+    shareSenderChipName.textContent = label;
+    shareSenderChip.removeAttribute('hidden');
+  } else {
+    shareSenderChip.setAttribute('hidden', '');
+  }
   // Flush current editor content before sharing
   await flushSave();
-  window.go.main.App.ShareSend();
+  window.go.main.App.ShareSend(label);
 });
 
 // Copy code to clipboard

@@ -38,5 +38,8 @@
   "preferGlobal": true,
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "octonote": "^1.0.0"
   }
 }

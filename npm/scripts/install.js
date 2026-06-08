@@ -121,7 +121,7 @@ async function main() {
   } catch (err) {
     warn(`Could not download binary: ${err.message}`);
     warn('To build from source:');
-    warn('  git clone https://github.com/nottaker/octonote');
+    warn('  git clone https://github.com/divyo-argha/octonote');
     warn('  cd octonote && go build -o bin/octonote ./tui/');
   }
 }

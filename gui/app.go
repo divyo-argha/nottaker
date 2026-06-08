@@ -126,10 +126,12 @@ func (a *App) emitStateChange() {
 // ── Share feature ────────────────────────────────────────────────────────────
 
 // ShareSend opens a Magic Wormhole for the currently active tab.
+// senderLabel is an optional name the sender provides (e.g. "Alice") so the
+// receiver can see who shared the content. Pass an empty string to omit.
 // It immediately emits "share:code" with the generated code, then waits
 // for the peer to connect. On success it emits "share:done", on error
 // it emits "share:error".
-func (a *App) ShareSend() {
+func (a *App) ShareSend(senderLabel string) {
 	a.mu.Lock()
 	idx := a.state.ActiveIndex
 	var tab core.Tab
@@ -148,7 +150,7 @@ func (a *App) ShareSend() {
 
 	go func() {
 		defer cancel()
-		code, wait, err := core.ShareSend(ctx, tab)
+		code, wait, err := core.ShareSend(ctx, tab, senderLabel)
 		if err != nil {
 			runtime.EventsEmit(a.ctx, "share:error", err.Error())
 			return

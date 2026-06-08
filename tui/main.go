@@ -331,7 +331,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.shareErr = ""
 				tab := m.state.Tabs[m.state.ActiveIndex]
 				cmds = append(cmds, func() tea.Msg {
-					code, wait, err := core.ShareSend(ctx, tab)
+					code, wait, err := core.ShareSend(ctx, tab, "")
 					if err != nil {
 						return shareErrMsg{err: err.Error()}
 					}

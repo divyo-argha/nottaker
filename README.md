@@ -24,6 +24,7 @@
     <a href="#-why-octonote">Why octoNote</a> ·
     <a href="#-features">Features</a> ·
     <a href="#-keyboard-shortcuts">Shortcuts</a> ·
+    <a href="#-p2p-sharing">Sharing</a> ·
     <a href="#-persistence">Persistence</a> ·
     <a href="#-contributing">Contributing</a>
   </p>
@@ -153,6 +154,7 @@ Write notes, open multiple tabs, close it, and reopen it. Everything is exactly 
 | Crash-proof atomic writes | ✅ | ❌ | ❌ | ❌ |
 | Identical Terminal & Desktop states | ✅ | ❌ | ❌ | ❌ |
 | Zero file naming overhead | ✅ | ❌ | ❌ | ❌ |
+| P2P tab sharing (no account) | ✅ | ❌ | ❌ | ❌ |
 
 ---
 
@@ -197,6 +199,26 @@ Write notes, open multiple tabs, close it, and reopen it. Everything is exactly 
 
 </td>
 </tr>
+<tr>
+<td width="50%" valign="top">
+
+### 🔗 P2P Tab Sharing
+- Share any tab instantly with a short human-readable code.
+- **No account, no cloud, no server setup** required.
+- End-to-end encrypted via [SPAKE2](https://www.ietf.org/rfc/rfc9382.html) — relay never sees your content.
+- Codes are one-time use and expire immediately after transfer.
+- Works between TUI and GUI, and is compatible with the Python `magic-wormhole` client.
+
+</td>
+<td width="50%" valign="top">
+
+### 🚀 Zero Configuration
+- Works out of the box on Windows, macOS, and Linux.
+- Data stored in proper platform-specific config directories.
+- Small binary size, rapid startup.
+
+</td>
+</tr>
 </table>
 
 ---
@@ -213,7 +235,33 @@ Both TUI and GUI share the same quick, muscle-memory shortcuts:
 | `Ctrl+Shift+Tab` | Switch to previous tab |
 | `Ctrl+1` ... `Ctrl+9` | Jump directly to tab by index |
 | `Tab` *(TUI)* | Cycle focus between tab bar and text area |
-| `Ctrl+C` *(TUI)* | Quit application |
+| `Ctrl+S` *(TUI)* | Share active tab — generates a wormhole code |
+| `Ctrl+R` *(TUI)* | Receive mode — enter a peer's code to import their tab |
+| `Ctrl+C` *(TUI)* | Quit application (or cancel active share) |
+
+---
+
+## 🔗 P2P Sharing
+
+octoNote has built-in **serverless peer-to-peer tab sharing** powered by the [Magic Wormhole](https://magic-wormhole.readthedocs.io/) protocol.
+
+**In the GUI:** Click the **Share** button in the title bar.  
+**In the TUI:** Press `Ctrl+S` to share, `Ctrl+R` to receive.
+
+```
+# Sender (TUI example)
+share code:  7-crossover-alpha   waiting for peer…   ^C cancel
+
+# Receiver (TUI example)
+enter code: _7-crossover-alpha_  then ↵ to connect  Esc cancel
+```
+
+- No account needed.
+- Codes are one-time use and expire instantly after the transfer.
+- Content is end-to-end encrypted — the relay server never sees your notes.
+- Interoperable with the Python `magic-wormhole` reference client.
+
+📖 **Full documentation:** [SHARING.md](SHARING.md)
 
 ---
 
