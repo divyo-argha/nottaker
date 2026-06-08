@@ -197,6 +197,8 @@ function startRename(tabBtn, titleSpan, idx) {
 
 function onKeyDown(e) {
   if (document.activeElement?.classList.contains('tab-rename-input')) return;
+  // Don't intercept keys when share modal is open
+  if (!shareModal.hidden) return;
 
   const ctrl = e.ctrlKey || e.metaKey;
 
@@ -310,4 +312,181 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     attempts++;
   }, 50);
+});
+
+// ── Share modal ──────────────────────────────────────────────────────────────
+
+const shareModal      = document.getElementById('share-modal');
+const btnShare        = document.getElementById('btn-share');
+const shareModalClose = document.getElementById('share-modal-close');
+const shareTabHost    = document.getElementById('share-tab-host');
+const shareTabGuest   = document.getElementById('share-tab-guest');
+const sharePanelHost  = document.getElementById('share-panel-host');
+const sharePanelGuest = document.getElementById('share-panel-guest');
+
+// Host elements
+const shareHostIdle   = document.getElementById('share-host-idle');
+const shareHostActive = document.getElementById('share-host-active');
+const shareHostDone   = document.getElementById('share-host-done');
+const shareCodeValue  = document.getElementById('share-code-value');
+const btnCopyCode     = document.getElementById('btn-copy-code');
+const btnGenerateCode = document.getElementById('btn-generate-code');
+const btnCancelShare  = document.getElementById('btn-cancel-share');
+const shareHostStatus = document.getElementById('share-host-status');
+
+// Guest elements
+const shareGuestIdle    = document.getElementById('share-guest-idle');
+const shareGuestWaiting = document.getElementById('share-guest-waiting');
+const shareGuestDone    = document.getElementById('share-guest-done');
+const shareGuestDoneMsg = document.getElementById('share-guest-done-msg');
+const shareCodeInput    = document.getElementById('share-code-input');
+const btnReceiveCode    = document.getElementById('btn-receive-code');
+const btnCancelReceive  = document.getElementById('btn-cancel-receive');
+const shareError        = document.getElementById('share-error');
+
+function openShareModal() {
+  resetShareModal();
+  shareModal.removeAttribute('hidden');
+  btnShare.classList.add('share-btn--active');
+  shareModal.querySelector('.share-modal__close').focus();
+}
+
+function closeShareModal() {
+  shareModal.setAttribute('hidden', '');
+  btnShare.classList.remove('share-btn--active');
+  // Cancel any in-flight operation
+  window.go?.main?.App?.ShareCancel?.();
+  editor.focus();
+}
+
+function resetShareModal() {
+  shareError.setAttribute('hidden', '');
+  shareError.textContent = '';
+  // Host
+  shareHostIdle.removeAttribute('hidden');
+  shareHostActive.setAttribute('hidden', '');
+  shareHostDone.setAttribute('hidden', '');
+  shareCodeValue.textContent = '—';
+  // Guest
+  shareGuestIdle.removeAttribute('hidden');
+  shareGuestWaiting.setAttribute('hidden', '');
+  shareGuestDone.setAttribute('hidden', '');
+  shareCodeInput.value = '';
+}
+
+function switchShareTab(tab) {
+  const isHost = tab === 'host';
+  shareTabHost.classList.toggle('share-tab--active', isHost);
+  shareTabGuest.classList.toggle('share-tab--active', !isHost);
+  shareTabHost.setAttribute('aria-selected', isHost ? 'true' : 'false');
+  shareTabGuest.setAttribute('aria-selected', !isHost ? 'true' : 'false');
+  sharePanelHost.toggleAttribute('hidden', !isHost);
+  sharePanelGuest.toggleAttribute('hidden', isHost);
+}
+
+function showShareError(msg) {
+  shareError.textContent = '⚠ ' + msg;
+  shareError.removeAttribute('hidden');
+}
+
+// Open / close
+btnShare.addEventListener('click', openShareModal);
+shareModalClose.addEventListener('click', closeShareModal);
+shareModal.querySelector('.share-modal__backdrop').addEventListener('click', closeShareModal);
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !shareModal.hidden) closeShareModal();
+});
+
+// Tab switching
+shareTabHost.addEventListener('click', () => switchShareTab('host'));
+shareTabGuest.addEventListener('click', () => switchShareTab('guest'));
+
+// ── Host: generate code ──────────────────────────────────────────────────────
+btnGenerateCode.addEventListener('click', async () => {
+  shareError.setAttribute('hidden', '');
+  shareHostIdle.setAttribute('hidden', '');
+  shareHostActive.removeAttribute('hidden');
+  shareCodeValue.textContent = 'opening wormhole…';
+  shareHostStatus.textContent = '⏳ Connecting to relay…';
+  // Flush current editor content before sharing
+  await flushSave();
+  window.go.main.App.ShareSend();
+});
+
+// Copy code to clipboard
+btnCopyCode.addEventListener('click', async () => {
+  const code = shareCodeValue.textContent;
+  if (!code || code === '—' || code === 'opening wormhole…') return;
+  try {
+    await navigator.clipboard.writeText(code);
+    btnCopyCode.classList.add('copied');
+    setTimeout(() => btnCopyCode.classList.remove('copied'), 1500);
+  } catch (_) {}
+});
+
+// Cancel host share
+btnCancelShare.addEventListener('click', () => {
+  window.go.main.App.ShareCancel();
+  resetShareModal();
+});
+
+// ── Guest: enter code & connect ─────────────────────────────────────────────
+btnReceiveCode.addEventListener('click', startReceive);
+shareCodeInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') startReceive();
+});
+
+function startReceive() {
+  const code = shareCodeInput.value.trim();
+  if (!code) { showShareError('Please enter a share code.'); return; }
+  shareError.setAttribute('hidden', '');
+  shareGuestIdle.setAttribute('hidden', '');
+  shareGuestWaiting.removeAttribute('hidden');
+  window.go.main.App.ShareReceive(code);
+}
+
+btnCancelReceive.addEventListener('click', () => {
+  window.go.main.App.ShareCancel();
+  resetShareModal();
+  switchShareTab('guest');
+});
+
+// ── Wails event listeners ────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  // Wait for runtime to be ready
+  const waitRuntime = setInterval(() => {
+    if (!window.runtime?.EventsOn) return;
+    clearInterval(waitRuntime);
+
+    // Code generated — show it
+    window.runtime.EventsOn('share:code', (code) => {
+      shareCodeValue.textContent = code;
+      shareHostStatus.textContent = '⏳ Waiting for peer to connect…';
+    });
+
+    // Transfer complete (host side)
+    window.runtime.EventsOn('share:done', () => {
+      shareHostActive.setAttribute('hidden', '');
+      shareHostDone.removeAttribute('hidden');
+      // Auto-close after 2.5 s
+      setTimeout(closeShareModal, 2500);
+    });
+
+    // Note received (guest side)
+    window.runtime.EventsOn('share:received', (payload) => {
+      state = payload.state;
+      renderTabs();
+      loadActiveTabIntoEditor();
+      shareGuestWaiting.setAttribute('hidden', '');
+      shareGuestDone.removeAttribute('hidden');
+      shareGuestDoneMsg.textContent = `✅ Tab "${payload.title}" added to your notebook!`;
+      setTimeout(closeShareModal, 2500);
+    });
+
+    // Error on either side
+    window.runtime.EventsOn('share:error', (msg) => {
+      resetShareModal();
+      showShareError(msg);
+    });
+  }, 100);
 });

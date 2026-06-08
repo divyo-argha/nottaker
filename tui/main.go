@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -89,19 +90,54 @@ var (
 
 	styleTabCount = lipgloss.NewStyle().
 			Foreground(lipgloss.Color(colSubtle))
+
+	styleShareCode = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#ffffff")).
+			Background(lipgloss.Color(colAccent)).
+			Bold(true).
+			Padding(0, 2)
+
+	styleShareInfo = lipgloss.NewStyle().
+			Foreground(lipgloss.Color(colAccentLt))
+
+	styleShareErr = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#ef4444")).
+			Bold(true)
 )
 
 type savedMsg struct{ at time.Time }
+type shareDoneMsg struct{}
+type shareCodeMsg struct{ code string }
+type shareErrMsg struct{ err string }
+type shareReceivedMsg struct {
+	title string
+	st    core.State
+}
+
+type shareMode int
+
+const (
+	shareOff     shareMode = iota
+	shareSending           // waiting for peer to connect
+	shareReceive           // user typing the code
+)
 
 type model struct {
-	storage   *core.Storage
-	state     core.State
-	textareas []textarea.Model
-	width     int
-	height    int
-	lastSaved time.Time
-	dirty     bool
-	quitting  bool
+	storage      *core.Storage
+	state        core.State
+	textareas    []textarea.Model
+	width        int
+	height       int
+	lastSaved    time.Time
+	dirty        bool
+	quitting     bool
+
+	// share state
+	shareMode    shareMode
+	shareCode    string     // generated code shown to sender
+	shareInput   string     // code being typed by receiver
+	shareErr     string     // last share error message
+	shareCancel  context.CancelFunc
 }
 
 func initialModel(s *core.Storage, st core.State) model {
@@ -150,15 +186,101 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 
+	case shareDoneMsg:
+		m.shareMode = shareOff
+		m.shareCode = ""
+		m.shareErr = ""
+
+	case shareCodeMsg:
+		m.shareCode = msg.code
+		m.shareErr = ""
+
+	case shareErrMsg:
+		m.shareMode = shareOff
+		m.shareCode = ""
+		m.shareErr = msg.err
+
+	case shareReceivedMsg:
+		m.state = msg.st
+		m.shareMode = shareOff
+		m.shareInput = ""
+		m.shareErr = ""
+		// Rebuild textareas to match new state
+		tas := make([]textarea.Model, len(m.state.Tabs))
+		for i, tab := range m.state.Tabs {
+			tas[i] = newTextArea()
+			tas[i].SetValue(tab.Body)
+		}
+		m.textareas = tas
+		if m.state.ActiveIndex < len(m.textareas) {
+			m.textareas[m.state.ActiveIndex].Focus()
+		}
+		m = m.resizeTextAreas()
+
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
 		m = m.resizeTextAreas()
 
 	case tea.KeyMsg:
+		// ── Receive-mode: user is typing a wormhole code ──
+		if m.shareMode == shareReceive {
+			switch msg.Type {
+			case tea.KeyEscape, tea.KeyCtrlC:
+				if m.shareCancel != nil {
+					m.shareCancel()
+				}
+				m.shareMode = shareOff
+				m.shareInput = ""
+				m.shareErr = ""
+			case tea.KeyEnter:
+				code := strings.TrimSpace(m.shareInput)
+				if code != "" {
+					ctx, cancel := context.WithCancel(context.Background())
+					m.shareCancel = cancel
+					s := m.storage
+					st := m.state
+					cmds = append(cmds, func() tea.Msg {
+						res, err := core.ShareReceive(ctx, code)
+						if err != nil {
+							if ctx.Err() != nil {
+								return nil
+							}
+							return shareErrMsg{err: err.Error()}
+						}
+						newTab := core.Tab{
+							ID:        fmt.Sprintf("%x", time.Now().UnixNano()),
+							Title:     res.TabTitle,
+							Body:      res.Body,
+							CreatedAt: time.Now(),
+							UpdatedAt: time.Now(),
+						}
+						st.Tabs = append(st.Tabs, newTab)
+						st.ActiveIndex = len(st.Tabs) - 1
+						s.Save(st)
+						return shareReceivedMsg{title: res.TabTitle, st: st}
+					})
+				}
+			case tea.KeyBackspace:
+				if len(m.shareInput) > 0 {
+					m.shareInput = m.shareInput[:len(m.shareInput)-1]
+				}
+			case tea.KeyRunes:
+				m.shareInput += msg.String()
+			}
+			return m, tea.Batch(cmds...)
+		}
+
+		// ── Normal mode ──
 		switch msg.Type {
 
 		case tea.KeyCtrlC:
+			if m.shareMode == shareSending && m.shareCancel != nil {
+				m.shareCancel()
+				m.shareMode = shareOff
+				m.shareCode = ""
+				return m, nil
+			}
 			m.syncSaveNow()
 			m.quitting = true
 			return m, tea.Quit
@@ -185,6 +307,50 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.triggerSave()
 
 		default:
+			// Ctrl+S → share active tab
+			if msg.Type == tea.KeyRunes && msg.Alt == false {
+				idx := m.state.ActiveIndex
+				updated, cmd := m.textareas[idx].Update(msg)
+				m.textareas[idx] = updated
+				cmds = append(cmds, cmd)
+				m.state.Tabs[idx].Body = m.textareas[idx].Value()
+				m.state.Tabs[idx].CursorLine = m.textareas[idx].Line()
+				m.state.Tabs[idx].UpdatedAt = time.Now()
+				m.dirty = true
+				m.triggerSave()
+				break
+			}
+			if msg.Type == tea.KeyCtrlS {
+				if m.shareMode == shareSending {
+					break // already sharing
+				}
+				ctx, cancel := context.WithCancel(context.Background())
+				m.shareCancel = cancel
+				m.shareMode = shareSending
+				m.shareCode = "connecting…"
+				m.shareErr = ""
+				tab := m.state.Tabs[m.state.ActiveIndex]
+				cmds = append(cmds, func() tea.Msg {
+					code, wait, err := core.ShareSend(ctx, tab)
+					if err != nil {
+						return shareErrMsg{err: err.Error()}
+					}
+					// First message: show the code
+					// We need to chain: emit code, then wait
+					// Use a secondary goroutine for wait
+					go func() {
+						wait() //nolint: errcheck
+					}()
+					return shareCodeMsg{code: code}
+				})
+				break
+			}
+			if msg.Type == tea.KeyCtrlR {
+				m.shareMode = shareReceive
+				m.shareInput = ""
+				m.shareErr = ""
+				break
+			}
 			idx := m.state.ActiveIndex
 			updated, cmd := m.textareas[idx].Update(msg)
 			m.textareas[idx] = updated
@@ -281,11 +447,37 @@ func (m model) renderContent() string {
 }
 
 func (m model) renderLegend() string {
+	// Share overlay messages
+	if m.shareMode == shareSending {
+		var status string
+		if m.shareCode == "connecting…" {
+			status = styleShareInfo.Render("opening wormhole…")
+		} else {
+			status = "share code: " + styleShareCode.Render(m.shareCode) +
+				styleShareInfo.Render("  waiting for peer…  ") +
+				styleKey.Render("^C") + " cancel"
+		}
+		return styleLegend.Width(m.width).Render(status)
+	}
+	if m.shareMode == shareReceive {
+		input := styleShareCode.Render("_" + m.shareInput + "_")
+		prompt := styleShareInfo.Render("enter code: ") + input +
+			styleShareInfo.Render("  then ") + styleKey.Render("↵") +
+			styleShareInfo.Render(" to connect  ") + styleKey.Render("Esc") + " cancel"
+		return styleLegend.Width(m.width).Render(prompt)
+	}
+	if m.shareErr != "" {
+		errMsg := styleShareErr.Render("share error: " + m.shareErr)
+		return styleLegend.Width(m.width).Render(errMsg)
+	}
+
 	shortcuts := []struct{ key, desc string }{
 		{"^N", "new"},
 		{"^W", "close"},
 		{"^→/←", "switch"},
 		{"Tab", "cycle"},
+		{"^S", "share"},
+		{"^R", "receive"},
 		{"^C", "quit"},
 	}
 

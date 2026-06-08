@@ -439,3 +439,341 @@ body {
 button:focus:not(:focus-visible) {
   outline: none;
 }
+
+/* ── Titlebar share button ─────────────────────────────────────────────────── */
+
+.titlebar__actions {
+  display: flex;
+  align-items: center;
+  margin-right: var(--space-sm);
+}
+
+.share-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--col-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--col-subtle);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--duration) var(--ease-out),
+              color var(--duration) var(--ease-out),
+              border-color var(--duration) var(--ease-out),
+              box-shadow var(--duration) var(--ease-out);
+}
+
+.share-btn:hover {
+  background: oklch(55% 0.24 293 / 15%);
+  color: var(--col-accent-lt);
+  border-color: var(--col-accent);
+  box-shadow: 0 0 10px oklch(55% 0.24 293 / 20%);
+}
+
+.share-btn.share-btn--active {
+  background: oklch(55% 0.24 293 / 20%);
+  color: var(--col-accent-lt);
+  border-color: var(--col-accent);
+}
+
+/* ── Share modal ────────────────────────────────────────────────────────────── */
+
+.share-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.share-modal[hidden] { display: none; }
+
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(-12px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.share-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: backdrop-in 200ms var(--ease-out) forwards;
+}
+
+.share-modal__panel {
+  position: relative;
+  z-index: 1;
+  width: min(460px, 92vw);
+  background: var(--col-surface);
+  border: 1px solid var(--col-border);
+  border-radius: var(--radius-md);
+  box-shadow:
+    0 0 0 1px oklch(55% 0.24 293 / 12%),
+    0 24px 60px rgba(0, 0, 0, 0.6),
+    0 0 40px oklch(55% 0.24 293 / 8%);
+  padding: var(--space-lg);
+  animation: modal-in 220ms var(--ease-out) forwards;
+}
+
+.share-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+}
+
+.share-modal__title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--col-accent-lt);
+}
+
+.share-modal__title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--col-text);
+}
+
+.share-modal__close {
+  width: 26px; height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--col-border);
+  color: var(--col-muted);
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+  transition: background var(--duration), color var(--duration);
+}
+
+.share-modal__close:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--col-danger);
+}
+
+/* ── Share mode tabs (Host / Guest) ─────────────────────────────────────────── */
+
+.share-tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--col-bg);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  margin-bottom: var(--space-md);
+}
+
+.share-tab {
+  flex: 1;
+  padding: 7px var(--space-sm);
+  border: none;
+  border-radius: calc(var(--radius-sm) - 2px);
+  background: transparent;
+  color: var(--col-muted);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--duration), color var(--duration);
+}
+
+.share-tab--active {
+  background: var(--col-surface-2);
+  color: var(--col-text);
+}
+
+.share-tab:hover:not(.share-tab--active) {
+  color: var(--col-subtle);
+}
+
+/* ── Share panels ───────────────────────────────────────────────────────────── */
+
+.share-panel { display: block; }
+.share-panel[hidden] { display: none; }
+
+.share-hint {
+  font-size: var(--font-size-sm);
+  color: var(--col-muted);
+  margin-bottom: var(--space-md);
+  line-height: 1.6;
+}
+
+.share-label {
+  display: block;
+  font-size: var(--font-size-sm);
+  color: var(--col-subtle);
+  margin-bottom: var(--space-sm);
+  font-weight: 500;
+}
+
+.share-host-section { display: block; }
+.share-host-section[hidden] { display: none; }
+
+/* ── Code display pill ──────────────────────────────────────────────────────── */
+
+.share-code-display {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.share-code-value {
+  flex: 1;
+  font-family: var(--font-editor);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+  background: oklch(55% 0.24 293 / 20%);
+  border: 1px solid var(--col-accent);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) var(--space-md);
+  letter-spacing: 0.12em;
+  text-align: center;
+  user-select: all;
+  -webkit-user-select: all;
+}
+
+.share-copy-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  border: 1px solid var(--col-border);
+  border-radius: var(--radius-sm);
+  background: var(--col-surface-2);
+  color: var(--col-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--duration), color var(--duration), border-color var(--duration);
+}
+
+.share-copy-btn:hover {
+  background: oklch(55% 0.24 293 / 15%);
+  color: var(--col-accent-lt);
+  border-color: var(--col-accent);
+}
+
+.share-copy-btn.copied {
+  color: var(--col-success);
+  border-color: var(--col-success);
+}
+
+/* ── Status messages ────────────────────────────────────────────────────────── */
+
+.share-status {
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.share-status--waiting { color: var(--col-warn); }
+.share-status--success { color: var(--col-success); font-weight: 600; }
+
+.share-error {
+  margin-top: var(--space-sm);
+  font-size: var(--font-size-sm);
+  color: var(--col-danger);
+  font-weight: 500;
+}
+
+.share-error[hidden] { display: none; }
+
+/* ── Action buttons ─────────────────────────────────────────────────────────── */
+
+.share-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 8px var(--space-md);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--col-accent);
+  color: #fff;
+  font-family: var(--font-ui);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--duration) var(--ease-out),
+              box-shadow var(--duration) var(--ease-out),
+              transform var(--duration) var(--ease-out);
+}
+
+.share-action-btn:hover {
+  background: var(--col-accent-lt);
+  box-shadow: 0 0 18px oklch(55% 0.24 293 / 40%);
+  transform: translateY(-1px);
+}
+
+.share-action-btn:active {
+  transform: translateY(0);
+}
+
+.share-cancel-btn {
+  padding: 6px var(--space-md);
+  border: 1px solid var(--col-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--col-muted);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: color var(--duration), border-color var(--duration);
+}
+
+.share-cancel-btn:hover {
+  color: var(--col-danger);
+  border-color: var(--col-danger);
+}
+
+/* ── Guest code input ───────────────────────────────────────────────────────── */
+
+.share-input-row {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.share-code-input {
+  flex: 1;
+  padding: 8px var(--space-md);
+  background: var(--col-bg);
+  border: 1px solid var(--col-border);
+  border-radius: var(--radius-sm);
+  color: var(--col-text);
+  font-family: var(--font-editor);
+  font-size: var(--font-size-md);
+  outline: none;
+  transition: border-color var(--duration), box-shadow var(--duration);
+}
+
+.share-code-input::placeholder {
+  color: var(--col-border);
+  font-style: italic;
+}
+
+.share-code-input:focus {
+  border-color: var(--col-accent);
+  box-shadow: 0 0 0 3px oklch(55% 0.24 293 / 18%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .share-modal__panel,
+  .share-modal__backdrop {
+    animation: none;
+  }
+}

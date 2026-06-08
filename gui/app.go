@@ -10,11 +10,20 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
+// shareSession holds the cancel function for an in-flight share operation.
+type shareSession struct {
+	cancel context.CancelFunc
+}
+
 type App struct {
 	ctx     context.Context
 	storage *core.Storage
 	state   core.State
 	mu      sync.Mutex
+
+	// share session — only one active at a time
+	shareMu  sync.Mutex
+	shareSes *shareSession
 }
 
 func NewApp(storage *core.Storage) *App {
@@ -112,4 +121,99 @@ func (a *App) emitStateChange() {
 		return
 	}
 	runtime.EventsEmit(a.ctx, "state:changed", a.state)
+}
+
+// ── Share feature ────────────────────────────────────────────────────────────
+
+// ShareSend opens a Magic Wormhole for the currently active tab.
+// It immediately emits "share:code" with the generated code, then waits
+// for the peer to connect. On success it emits "share:done", on error
+// it emits "share:error".
+func (a *App) ShareSend() {
+	a.mu.Lock()
+	idx := a.state.ActiveIndex
+	var tab core.Tab
+	if idx >= 0 && idx < len(a.state.Tabs) {
+		tab = a.state.Tabs[idx]
+	}
+	a.mu.Unlock()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	a.shareMu.Lock()
+	if a.shareSes != nil {
+		a.shareSes.cancel() // cancel any previous session
+	}
+	a.shareSes = &shareSession{cancel: cancel}
+	a.shareMu.Unlock()
+
+	go func() {
+		defer cancel()
+		code, wait, err := core.ShareSend(ctx, tab)
+		if err != nil {
+			runtime.EventsEmit(a.ctx, "share:error", err.Error())
+			return
+		}
+		runtime.EventsEmit(a.ctx, "share:code", code)
+		if err := wait(); err != nil {
+			// Context cancelled = user hit cancel — emit nothing.
+			if ctx.Err() == nil {
+				runtime.EventsEmit(a.ctx, "share:error", err.Error())
+			}
+			return
+		}
+		runtime.EventsEmit(a.ctx, "share:done", nil)
+	}()
+}
+
+// ShareReceive connects to a wormhole using the user-supplied code.
+// On success it imports the received content as a new tab and emits
+// "share:received" with the new tab title. On error it emits "share:error".
+func (a *App) ShareReceive(code string) {
+	if code == "" {
+		return
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	a.shareMu.Lock()
+	if a.shareSes != nil {
+		a.shareSes.cancel()
+	}
+	a.shareSes = &shareSession{cancel: cancel}
+	a.shareMu.Unlock()
+
+	go func() {
+		defer cancel()
+		result, err := core.ShareReceive(ctx, code)
+		if err != nil {
+			if ctx.Err() == nil {
+				runtime.EventsEmit(a.ctx, "share:error", err.Error())
+			}
+			return
+		}
+		a.mu.Lock()
+		newTab := core.Tab{
+			ID:        fmt.Sprintf("%x", time.Now().UnixNano()),
+			Title:     result.TabTitle,
+			Body:      result.Body,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+		a.state.Tabs = append(a.state.Tabs, newTab)
+		a.state.ActiveIndex = len(a.state.Tabs) - 1
+		a.storage.Save(a.state)
+		a.mu.Unlock()
+		runtime.EventsEmit(a.ctx, "share:received", map[string]interface{}{
+			"title": result.TabTitle,
+			"state": a.state,
+		})
+	}()
+}
+
+// ShareCancel aborts any in-flight share or receive operation.
+func (a *App) ShareCancel() {
+	a.shareMu.Lock()
+	defer a.shareMu.Unlock()
+	if a.shareSes != nil {
+		a.shareSes.cancel()
+		a.shareSes = nil
+	}
 }
