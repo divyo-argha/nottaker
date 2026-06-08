@@ -1,8 +1,8 @@
 #!/bin/sh
 set -e
 
-REPO="nottaker/nottaker"
-VERSION="0.1.0"
+REPO="divyo-argha/nottaker"
+VERSION="1.0.0"
 
 # Detect OS and Arch
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"

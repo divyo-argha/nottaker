@@ -10,9 +10,9 @@ It works completely across all platforms out of the box (macOS, Linux, and Windo
 ✦ nottaker
  1: scratch   2: ideas   3: todo   [+]
 ╭──────────────────────────────────────────╮
-│ Start typing…                             │
-│                                           │
-│                                           │
+│ Start typing…                            │
+│                                          │
+│                                          │
 ╰──────────────────────────────────────────╯
 ^N new  ^W close  ^→/← switch  Tab cycle  ^C quit          ✓ saved 21:04:55
 ```
@@ -60,19 +60,19 @@ The easiest way to get `nottaker` is to use our installation scripts, which down
 **macOS / Linux (Bash)**
 ```bash
 # Install TUI + GUI
-curl -sSfL https://raw.githubusercontent.com/nottaker/nottaker/main/scripts/install-gui.sh | sh
+curl -sSfL https://raw.githubusercontent.com/divyo-argha/nottaker/main/scripts/install-gui.sh | sh
 
 # Install TUI only
-curl -sSfL https://raw.githubusercontent.com/nottaker/nottaker/main/scripts/install-cli.sh | sh
+curl -sSfL https://raw.githubusercontent.com/divyo-argha/nottaker/main/scripts/install-cli.sh | sh
 ```
 
 **Windows (PowerShell)**
 ```powershell
 # Install TUI + GUI
-iwr -useb https://raw.githubusercontent.com/nottaker/nottaker/main/scripts/install-gui.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/divyo-argha/nottaker/main/scripts/install-gui.ps1 | iex
 
 # Install TUI only
-iwr -useb https://raw.githubusercontent.com/nottaker/nottaker/main/scripts/install-cli.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/divyo-argha/nottaker/main/scripts/install-cli.ps1 | iex
 ```
 
 ### NPM / NPX (TUI Only)

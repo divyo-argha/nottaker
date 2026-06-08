@@ -1,6 +1,6 @@
 {
   "name": "nottaker",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Lightweight multi-tab auto-saving scratchpad — TUI for your terminal",
   "keywords": [
     "scratchpad",
@@ -11,13 +11,13 @@
     "cli",
     "go"
   ],
-  "homepage": "https://github.com/nottaker/nottaker#readme",
+  "homepage": "https://github.com/divyo-argha/nottaker#readme",
   "bugs": {
-    "url": "https://github.com/nottaker/nottaker/issues"
+    "url": "https://github.com/divyo-argha/nottaker/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nottaker/nottaker.git"
+    "url": "git+https://github.com/divyo-argha/nottaker.git"
   },
   "license": "MIT",
   "author": "nottaker contributors",

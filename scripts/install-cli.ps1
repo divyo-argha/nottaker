@@ -1,5 +1,5 @@
-$repo = "nottaker/nottaker"
-$version = "0.1.0"
+$repo = "divyo-argha/nottaker"
+$version = "1.0.0"
 $arch = if ($env:PROCESSOR_ARCHITECTURE -eq "AMD64") { "amd64" } else { "arm64" }
 $binary = "nottaker-windows-$arch.exe"
 $url = "https://github.com/$repo/releases/download/v$version/$binary"

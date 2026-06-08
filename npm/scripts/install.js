@@ -10,7 +10,7 @@ const { pipeline } = require('stream');
 const { promisify } = require('util');
 const streamPipeline = promisify(pipeline);
 
-const REPO_OWNER   = 'nottaker';
+const REPO_OWNER   = 'divyo-argha';
 const REPO_NAME    = 'nottaker';
 const VERSION      = require('../package.json').version;
 const RELEASE_TAG  = `v${VERSION}`;

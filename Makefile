@@ -4,7 +4,7 @@
 BINARY_NAME   := nottaker
 GUI_BINARY    := nottaker-gui
 MODULE        := github.com/nottaker/nottaker
-VERSION       := 0.1.0
+VERSION       := 1.0.0
 LDFLAGS       := -s -w -X main.version=$(VERSION)
 
 # Directories

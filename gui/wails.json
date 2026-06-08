@@ -9,7 +9,7 @@
   "version": "2",
   "info": {
     "productName": "nottaker",
-    "productVersion": "0.1.0",
+    "productVersion": "1.0.0",
     "productIdentifier": "io.nottaker.app",
     "description": "Lightweight multi-tab auto-saving scratchpad",
     "copyright": "© 2024 nottaker contributors",
