@@ -13,8 +13,6 @@ import (
 	"github.com/nottaker/nottaker/core"
 )
 
-// ─── Colour Palette ──────────────────────────────────────────────────────────
-
 const (
 	colBg       = "#0f0f0f"
 	colSurface  = "#1a1a2e"
@@ -29,8 +27,6 @@ const (
 	colTabBg    = "#16213e"
 	colTabAct   = "#7c3aed"
 )
-
-// ─── Styles ──────────────────────────────────────────────────────────────────
 
 var (
 	styleTabInactive = lipgloss.NewStyle().
@@ -95,25 +91,18 @@ var (
 			Foreground(lipgloss.Color(colSubtle))
 )
 
-// ─── Bubble Tea Messages ──────────────────────────────────────────────────────
-
-// savedMsg is sent by the storage layer (via a goroutine) to signal a flush.
 type savedMsg struct{ at time.Time }
 
-// ─── Model ───────────────────────────────────────────────────────────────────
-
 type model struct {
-	storage     *core.Storage
-	state       core.State
-	textareas   []textarea.Model
-	width       int
-	height      int
-	lastSaved   time.Time
-	dirty       bool        // true when unsaved changes exist
-	quitting    bool
+	storage   *core.Storage
+	state     core.State
+	textareas []textarea.Model
+	width     int
+	height    int
+	lastSaved time.Time
+	dirty     bool
+	quitting  bool
 }
-
-// ─── Init / Load ─────────────────────────────────────────────────────────────
 
 func initialModel(s *core.Storage, st core.State) model {
 	tas := make([]textarea.Model, len(st.Tabs))
@@ -129,7 +118,6 @@ func initialModel(s *core.Storage, st core.State) model {
 		lastSaved: time.Now(),
 	}
 
-	// Focus the active textarea.
 	if m.state.ActiveIndex < len(m.textareas) {
 		m.textareas[m.state.ActiveIndex].Focus()
 	}
@@ -140,7 +128,7 @@ func newTextArea() textarea.Model {
 	ta := textarea.New()
 	ta.Placeholder = "Start typing…"
 	ta.ShowLineNumbers = false
-	ta.CharLimit = 0 // unlimited
+	ta.CharLimit = 0
 	ta.SetWidth(80)
 	ta.SetHeight(20)
 	ta.FocusedStyle.CursorLine = lipgloss.NewStyle().Background(lipgloss.Color("#1e1e3f"))
@@ -153,8 +141,6 @@ func newTextArea() textarea.Model {
 	return ta
 }
 
-// ─── Bubble Tea Interface ─────────────────────────────────────────────────────
-
 func (m model) Init() tea.Cmd {
 	return textarea.Blink
 }
@@ -164,27 +150,22 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 
-	// ── Terminal resize ──
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
 		m = m.resizeTextAreas()
 
-	// ── Keyboard ──
 	case tea.KeyMsg:
 		switch msg.Type {
 
-		// Quit
 		case tea.KeyCtrlC:
 			m.syncSaveNow()
 			m.quitting = true
 			return m, tea.Quit
 
-		// Next tab
 		case tea.KeyCtrlRight, tea.KeyCtrlF:
 			m = m.switchTab((m.state.ActiveIndex + 1) % len(m.state.Tabs))
 
-		// Prev tab
 		case tea.KeyCtrlLeft, tea.KeyCtrlB:
 			idx := m.state.ActiveIndex - 1
 			if idx < 0 {
@@ -192,27 +173,22 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m = m.switchTab(idx)
 
-		// Cycle with Tab key
 		case tea.KeyTab:
 			m = m.switchTab((m.state.ActiveIndex + 1) % len(m.state.Tabs))
 
-		// New tab
 		case tea.KeyCtrlN:
 			m = m.newTab()
 			m.triggerSave()
 
-		// Close tab
 		case tea.KeyCtrlW:
 			m = m.closeTab()
 			m.triggerSave()
 
-		// All other keys → delegate to active textarea
 		default:
 			idx := m.state.ActiveIndex
 			updated, cmd := m.textareas[idx].Update(msg)
 			m.textareas[idx] = updated
 			cmds = append(cmds, cmd)
-			// Sync body to state and schedule async save.
 			m.state.Tabs[idx].Body = m.textareas[idx].Value()
 			m.state.Tabs[idx].CursorLine = m.textareas[idx].Line()
 			m.state.Tabs[idx].UpdatedAt = time.Now()
@@ -220,13 +196,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.triggerSave()
 		}
 
-	// ── Save acknowledgement ──
 	case savedMsg:
 		m.lastSaved = msg.at
 		m.dirty = false
 	}
 
-	// Pass all other messages to the active textarea.
 	if _, ok := msg.(tea.KeyMsg); !ok {
 		idx := m.state.ActiveIndex
 		if idx < len(m.textareas) {
@@ -239,8 +213,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-// ─── View ────────────────────────────────────────────────────────────────────
-
 func (m model) View() string {
 	if m.quitting {
 		return styleTitle.Render("nottaker — bye! 👋") + "\n"
@@ -251,21 +223,17 @@ func (m model) View() string {
 
 	var b strings.Builder
 
-	// App title row
 	title := styleTitle.Render("✦ nottaker")
 	tabCount := styleTabCount.Render(fmt.Sprintf(" %d tab(s)", len(m.state.Tabs)))
 	b.WriteString(lipgloss.JoinHorizontal(lipgloss.Left, title, tabCount))
 	b.WriteString("\n")
 
-	// Tab bar
 	b.WriteString(m.renderTabBar())
 	b.WriteString("\n")
 
-	// Content area
 	b.WriteString(m.renderContent())
 	b.WriteString("\n")
 
-	// Legend / status bar
 	b.WriteString(m.renderLegend())
 
 	return b.String()
@@ -291,12 +259,11 @@ func (m model) renderContent() string {
 		return ""
 	}
 
-	// Available height: total - title(1) - tabbar(3) - legend(1) - padding(2)
 	contentH := m.height - 8
 	if contentH < 4 {
 		contentH = 4
 	}
-	contentW := m.width - 4 // account for border + padding
+	contentW := m.width - 4
 
 	m.textareas[idx].SetWidth(contentW)
 	m.textareas[idx].SetHeight(contentH)
@@ -348,8 +315,6 @@ func (m model) renderLegend() string {
 		Render(left + strings.Repeat(" ", gap) + right)
 }
 
-// ─── Tab Operations ───────────────────────────────────────────────────────────
-
 func (m model) switchTab(idx int) model {
 	if idx < 0 || idx >= len(m.state.Tabs) {
 		return m
@@ -368,7 +333,6 @@ func (m model) newTab() model {
 	ta := newTextArea()
 	ta.Focus()
 	m.textareas = append(m.textareas, ta)
-	// Blur old active.
 	m.textareas[m.state.ActiveIndex].Blur()
 	m.state.ActiveIndex = len(m.state.Tabs) - 1
 	return m
@@ -376,7 +340,6 @@ func (m model) newTab() model {
 
 func (m model) closeTab() model {
 	if len(m.state.Tabs) <= 1 {
-		// Never close the last tab — just clear it.
 		m.textareas[0].Reset()
 		m.state.Tabs[0].Body = ""
 		m.state.Tabs[0].UpdatedAt = time.Now()
@@ -392,19 +355,13 @@ func (m model) closeTab() model {
 	return m
 }
 
-// ─── Save Helpers ─────────────────────────────────────────────────────────────
-
-// triggerSave queues an async save; the background goroutine handles the write.
 func (m *model) triggerSave() {
 	m.storage.Save(m.state)
 }
 
-// syncSaveNow is called on quit — drains via the channel (close + wait).
 func (m *model) syncSaveNow() {
 	m.storage.Save(m.state)
 }
-
-// ─── Layout ──────────────────────────────────────────────────────────────────
 
 func (m model) resizeTextAreas() model {
 	contentH := m.height - 8
@@ -419,8 +376,6 @@ func (m model) resizeTextAreas() model {
 	return m
 }
 
-// ─── Utilities ────────────────────────────────────────────────────────────────
-
 func truncate(s string, max int) string {
 	if utf8.RuneCountInString(s) <= max {
 		return s
@@ -429,7 +384,6 @@ func truncate(s string, max int) string {
 	return string(runes[:max-1]) + "…"
 }
 
-// visibleLen approximates the visible character width (strips ANSI codes naively).
 func visibleLen(s string) int {
 	inEscape := false
 	count := 0
@@ -448,10 +402,7 @@ func visibleLen(s string) int {
 	return count
 }
 
-// ─── Main ────────────────────────────────────────────────────────────────────
-
 func main() {
-	// Initialise storage.
 	s, err := core.NewStorage()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "nottaker: %v\n", err)
@@ -459,19 +410,17 @@ func main() {
 	}
 	defer s.Close()
 
-	// Load persisted state.
 	st, err := s.Load()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "nottaker: load state: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Build model and run.
 	m := initialModel(s, st)
 	p := tea.NewProgram(
 		m,
-		tea.WithAltScreen(),       // full-screen TUI
-		tea.WithMouseCellMotion(), // optional: enable mouse clicks
+		tea.WithAltScreen(),
+		tea.WithMouseCellMotion(),
 	)
 
 	if _, err := p.Run(); err != nil {

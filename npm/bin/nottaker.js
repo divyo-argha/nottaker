@@ -1,12 +1,4 @@
 #!/usr/bin/env node
-/**
- * nottaker — bin/nottaker.js
- *
- * Thin shim: resolves the platform binary that was downloaded by scripts/install.js
- * during `npm install`, then spawns it — forwarding all stdio and process signals.
- *
- * Usage: npx nottaker  OR  nottaker  (when installed globally)
- */
 
 'use strict';
 
@@ -17,10 +9,9 @@ const os   = require('os');
 
 const BINARY_DIR = path.join(__dirname, '..', 'bin', 'binaries');
 
-// ── Resolve binary path ────────────────────────────────────────────────────
 function getPlatformBinary() {
-  const platform = process.platform; // 'darwin' | 'linux' | 'win32'
-  const arch     = process.arch;     // 'x64' | 'arm64' | 'ia32'
+  const platform = process.platform;
+  const arch     = process.arch;
 
   const platformMap = {
     'darwin-arm64': 'nottaker-darwin-arm64',
@@ -43,7 +34,6 @@ function getPlatformBinary() {
   return path.join(BINARY_DIR, binary);
 }
 
-// ── Spawn binary ───────────────────────────────────────────────────────────
 const binaryPath = getPlatformBinary();
 
 if (!fs.existsSync(binaryPath)) {
@@ -52,7 +42,6 @@ if (!fs.existsSync(binaryPath)) {
   process.exit(1);
 }
 
-// Ensure the binary is executable (Linux/macOS).
 if (process.platform !== 'win32') {
   try {
     fs.accessSync(binaryPath, fs.constants.X_OK);
@@ -66,7 +55,6 @@ const result = spawnSync(binaryPath, process.argv.slice(2), {
   env: process.env,
 });
 
-// Forward exit code.
 if (result.error) {
   console.error(`[nottaker] Failed to launch: ${result.error.message}`);
   process.exit(1);

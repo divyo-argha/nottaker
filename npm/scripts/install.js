@@ -1,13 +1,4 @@
 #!/usr/bin/env node
-/**
- * nottaker — scripts/install.js
- *
- * Runs after `npm install` (postinstall hook).
- * Downloads the correct pre-compiled Go TUI binary for the current
- * platform/arch from GitHub Releases and saves it to bin/binaries/.
- *
- * Requirements: Node.js >= 18 (built-in fetch / https + no external deps).
- */
 
 'use strict';
 
@@ -19,18 +10,13 @@ const { pipeline } = require('stream');
 const { promisify } = require('util');
 const streamPipeline = promisify(pipeline);
 
-// ── Configuration ──────────────────────────────────────────────────────────
-
 const REPO_OWNER   = 'nottaker';
 const REPO_NAME    = 'nottaker';
 const VERSION      = require('../package.json').version;
 const RELEASE_TAG  = `v${VERSION}`;
 const GITHUB_BASE  = `https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${RELEASE_TAG}`;
 
-// Output directory — relative to this script's package root.
 const BIN_DIR = path.join(__dirname, '..', 'bin', 'binaries');
-
-// ── Platform → binary name map ────────────────────────────────────────────
 
 const PLATFORM_MAP = {
   'darwin-arm64': 'nottaker-darwin-arm64',
@@ -41,17 +27,10 @@ const PLATFORM_MAP = {
   'win32-arm64':  'nottaker-windows-arm64.exe',
 };
 
-// ── Helpers ───────────────────────────────────────────────────────────────
-
 function log(msg)  { process.stdout.write(`[nottaker] ${msg}\n`); }
 function warn(msg) { process.stderr.write(`[nottaker] WARN: ${msg}\n`); }
 function fail(msg) { process.stderr.write(`[nottaker] ERROR: ${msg}\n`); process.exit(1); }
 
-/**
- * Follow HTTP redirects and return the final response.
- * GitHub releases redirect from /releases/download → S3/CDN.
- * Handles up to 10 hops.
- */
 function followRedirects(url, maxRedirects = 10) {
   return new Promise((resolve, reject) => {
     const attempt = (currentUrl, remaining) => {
@@ -60,7 +39,7 @@ function followRedirects(url, maxRedirects = 10) {
       const lib = currentUrl.startsWith('https') ? https : http;
       const req = lib.get(currentUrl, { headers: { 'User-Agent': 'nottaker-installer/1.0' } }, res => {
         if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-          res.resume(); // drain
+          res.resume();
           attempt(res.headers.location, remaining - 1);
         } else {
           resolve(res);
@@ -73,10 +52,6 @@ function followRedirects(url, maxRedirects = 10) {
   });
 }
 
-/**
- * Download a file from url and save to destPath.
- * Shows a simple byte-count progress log.
- */
 async function download(url, destPath) {
   log(`Downloading ${url}`);
   log(`         → ${destPath}`);
@@ -105,7 +80,6 @@ async function download(url, destPath) {
 
   process.stdout.write('\n');
 
-  // Atomic rename.
   fs.renameSync(tmpPath, destPath);
 }
 
@@ -114,8 +88,6 @@ function formatBytes(bytes) {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
 }
-
-// ── Main ──────────────────────────────────────────────────────────────────
 
 async function main() {
   const platform = process.platform;
@@ -126,16 +98,14 @@ async function main() {
   if (!binary) {
     warn(`Platform "${key}" is not pre-built. Skipping binary download.`);
     warn('You can build from source: go build ./tui/ → rename to nottaker');
-    process.exit(0); // Non-fatal: allow install to complete.
+    process.exit(0);
   }
 
-  // Ensure output directory exists.
   fs.mkdirSync(BIN_DIR, { recursive: true });
 
   const destPath   = path.join(BIN_DIR, binary);
   const downloadUrl = `${GITHUB_BASE}/${binary}`;
 
-  // Skip download if binary already exists (e.g. re-running postinstall).
   if (fs.existsSync(destPath)) {
     log(`Binary already present: ${destPath}`);
     ensureExecutable(destPath);
@@ -149,12 +119,10 @@ async function main() {
     log(`✓ Installed nottaker ${VERSION} for ${key}`);
     log('Run: nottaker');
   } catch (err) {
-    // Non-fatal: the user might not have internet or be on CI.
     warn(`Could not download binary: ${err.message}`);
     warn('To build from source:');
     warn('  git clone https://github.com/nottaker/nottaker');
     warn('  cd nottaker && go build -o bin/nottaker ./tui/');
-    // Don't exit(1) so the npm install itself still succeeds.
   }
 }
 
@@ -166,5 +134,5 @@ function ensureExecutable(filePath) {
 
 main().catch(err => {
   warn(err.message);
-  process.exit(0); // Still non-fatal.
+  process.exit(0);
 });

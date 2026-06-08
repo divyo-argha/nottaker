@@ -1,12 +1,4 @@
-/* ──────────────────────────────────────────────────────────────────────────
-   nottaker — GUI frontend styles
-   Design: dark glassmorphism, purple accent, JetBrains Mono editor
-   Modern CSS: custom properties, scrollbar-color, field-sizing, oklch gradients
-   ──────────────────────────────────────────────────────────────────────── */
-
-/* ── Design Tokens ────────────────────────────────────────────────────────── */
 :root {
-  /* Colours */
   --col-bg:          #0f0f0f;
   --col-surface:     #1a1a2e;
   --col-surface-2:   #16213e;
@@ -24,21 +16,18 @@
   --col-tab-active:  #7c3aed;
   --col-tab-hover:   #2d2d4e;
 
-  /* Typography */
   --font-ui:     'Inter', system-ui, sans-serif;
   --font-editor: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
   --font-size-sm: 0.75rem;
   --font-size-md: 0.875rem;
-  --font-size-editor: 0.9375rem; /* 15px — comfortable reading */
+  --font-size-editor: 0.9375rem;
   --line-height-editor: 1.7;
 
-  /* Spacing */
   --space-xs:  4px;
   --space-sm:  8px;
   --space-md: 16px;
   --space-lg: 24px;
 
-  /* Chrome */
   --titlebar-h: 38px;
   --tabbar-h:   42px;
   --statusbar-h:32px;
@@ -46,14 +35,12 @@
   --radius-md: 10px;
   --radius-tab: 8px;
 
-  /* Transitions */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --duration: 150ms;
 
   color-scheme: dark;
 }
 
-/* ── Reset & Base ─────────────────────────────────────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -72,14 +59,12 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Layout: stack rows */
 body {
   display: grid;
   grid-template-rows: var(--titlebar-h) var(--tabbar-h) 1fr var(--statusbar-h);
   grid-template-columns: 1fr;
 }
 
-/* Screen-reader only utility */
 .sr-only {
   position: absolute;
   width: 1px; height: 1px;
@@ -90,7 +75,6 @@ body {
   border: 0;
 }
 
-/* ── Title Bar ────────────────────────────────────────────────────────────── */
 .titlebar {
   display: flex;
   align-items: center;
@@ -109,7 +93,6 @@ body {
   gap: var(--space-sm);
   flex: 1;
   height: 100%;
-  /* Allow Wails drag on this region */
 }
 
 .titlebar__logo {
@@ -132,7 +115,6 @@ body {
   text-transform: lowercase;
 }
 
-/* Window control buttons */
 .titlebar__controls {
   display: flex;
   align-items: center;
@@ -168,7 +150,6 @@ body {
   outline-offset: 2px;
 }
 
-/* ── Tab Bar ──────────────────────────────────────────────────────────────── */
 .tabbar {
   display: flex;
   align-items: flex-end;
@@ -179,12 +160,11 @@ body {
   padding: 0 var(--space-sm);
   overflow-x: auto;
   overflow-y: hidden;
-  scrollbar-width: none; /* Firefox */
+  scrollbar-width: none;
 }
 
 .tabbar::-webkit-scrollbar { display: none; }
 
-/* Individual tab */
 .tab {
   display: flex;
   align-items: center;
@@ -228,7 +208,6 @@ body {
   outline-offset: -2px;
 }
 
-/* Tab title text */
 .tab__title {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -236,7 +215,6 @@ body {
   max-width: 100px;
 }
 
-/* Tab index badge */
 .tab__index {
   font-size: 0.65rem;
   color: var(--col-accent-lt);
@@ -244,7 +222,6 @@ body {
   flex-shrink: 0;
 }
 
-/* Tab close button */
 .tab__close {
   display: flex;
   align-items: center;
@@ -273,7 +250,6 @@ body {
   color: var(--col-danger);
 }
 
-/* New tab button */
 .tab--new {
   width: 30px;
   height: 30px;
@@ -293,7 +269,6 @@ body {
   border-color: var(--col-accent);
 }
 
-/* ── Editor Area ──────────────────────────────────────────────────────────── */
 .editor-area {
   display: flex;
   flex: 1;
@@ -315,11 +290,6 @@ body {
   font-size: var(--font-size-editor);
   line-height: var(--line-height-editor);
   caret-color: var(--col-accent-lt);
-
-  /* field-sizing: content is not used here because we want fixed full-area sizing;
-     instead we use height: 100% fill. */
-
-  /* Custom scrollbar */
   scrollbar-width: thin;
   scrollbar-color: var(--col-border) transparent;
   overflow-y: auto;
@@ -339,12 +309,10 @@ body {
 }
 .editor::-webkit-scrollbar-thumb:hover { background: var(--col-muted); }
 
-/* Selection highlight */
 .editor::selection {
   background: oklch(55% 0.24 293 / 35%);
 }
 
-/* ── Status Bar ───────────────────────────────────────────────────────────── */
 .statusbar {
   display: flex;
   align-items: center;
@@ -394,7 +362,6 @@ body {
   flex-shrink: 0;
 }
 
-/* Save status indicator */
 .status-indicator {
   display: flex;
   align-items: center;
@@ -428,7 +395,6 @@ body {
   white-space: nowrap;
 }
 
-/* ── Inline tab rename input ─────────────────────────────────────────────── */
 .tab-rename-input {
   background: transparent;
   border: none;
@@ -442,7 +408,6 @@ body {
   padding: 0 2px;
 }
 
-/* ── Fade-in animation for new tabs ──────────────────────────────────────── */
 @keyframes tab-appear {
   from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -452,7 +417,6 @@ body {
   animation: tab-appear 200ms var(--ease-out) forwards;
 }
 
-/* ── Reduced motion ───────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .titlebar__logo,
   .status-indicator--saving .status-icon,
@@ -465,7 +429,6 @@ body {
   }
 }
 
-/* ── Focus styles for accessibility ─────────────────────────────────────── */
 :focus-visible {
   outline: 2px solid var(--col-accent-lt);
   outline-offset: 2px;

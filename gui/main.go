@@ -15,7 +15,6 @@ import (
 )
 
 func main() {
-	// Initialise shared storage backend.
 	storage, err := core.NewStorage()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "nottaker gui: storage init: %v\n", err)
@@ -25,21 +24,19 @@ func main() {
 	app := NewApp(storage)
 
 	err = wails.Run(&options.App{
-		Title:  "nottaker",
-		Width:  1024,
-		Height: 720,
+		Title:     "nottaker",
+		Width:     1024,
+		Height:    720,
 		MinWidth:  720,
 		MinHeight: 480,
 
-		// Frameless, dark, translucent — matches TUI aesthetic.
 		Frameless:        true,
 		BackgroundColour: &options.RGBA{R: 15, G: 15, B: 15, A: 255},
 
 		AssetServer: &assetserver.Options{
-			Assets: assets, // embedded in assets.go
+			Assets: assets,
 		},
 
-		// Single-instance: bring existing window to front.
 		SingleInstanceLock: &options.SingleInstanceLock{
 			UniqueId:               "io.nottaker.app.singleinstance",
 			OnSecondInstanceLaunch: app.onSecondInstanceLaunch,
@@ -50,7 +47,6 @@ func main() {
 
 		Bind: []interface{}{app},
 
-		// Platform-specific window chrome.
 		Mac: &mac.Options{
 			TitleBar:             mac.TitleBarHiddenInset(),
 			WebviewIsTransparent: false,
@@ -76,12 +72,10 @@ func main() {
 	}
 }
 
-// startup is called once Wails has finished launching.
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	st, err := a.storage.Load()
 	if err != nil {
-		// Non-fatal: fall back to a default single-tab state.
 		st = core.State{
 			Version:     1,
 			ActiveIndex: 0,
@@ -91,13 +85,10 @@ func (a *App) startup(ctx context.Context) {
 	a.state = st
 }
 
-// shutdown is called when the app is about to close.
 func (a *App) shutdown(_ context.Context) {
 	a.storage.Save(a.state)
 	a.storage.Close()
 }
 
-// onSecondInstanceLaunch is called when a second instance tries to start.
 func (a *App) onSecondInstanceLaunch(_ options.SecondInstanceData) {
-	// Bring existing window to front (runtime.WindowShow would go here in a full impl).
 }
