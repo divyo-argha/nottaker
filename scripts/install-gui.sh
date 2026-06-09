@@ -179,7 +179,9 @@ fi
 
 if [ -d ".git" ] && git remote -v 2>/dev/null | grep -q "$REPO"; then
     echo "→ Copying local repository files…"
-    cp -R . "$TMP_DIR/octonote"
+    rm -rf "$TMP_DIR/octonote"
+    mkdir -p "$TMP_DIR/octonote"
+    cp -R ./* "$TMP_DIR/octonote"/
 else
     echo "→ Cloning octonote…"
     if ! git clone --depth=1 "$REPO_URL" "$TMP_DIR/octonote" >/dev/null 2>&1; then
