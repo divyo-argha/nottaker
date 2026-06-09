@@ -10,10 +10,24 @@ export function GetState():Promise<core.State>;
 
 export function GetStorageDir():Promise<string>;
 
+export function GetTabFilePath(arg1:number):Promise<string>;
+
 export function NewTab():Promise<core.State>;
 
+export function OpenFile(arg1:string):Promise<Record<string, any>>;
+
 export function RenameTab(arg1:number,arg2:string):Promise<core.State>;
+
+export function SaveCurrentFile(arg1:number,arg2:string):Promise<string>;
+
+export function SaveFileAs(arg1:number,arg2:string,arg3:string):Promise<string>;
 
 export function SaveTab(arg1:number,arg2:string,arg3:number):Promise<void>;
 
 export function SetActiveTab(arg1:number):Promise<core.State>;
+
+export function ShareCancel():Promise<void>;
+
+export function ShareReceive(arg1:string):Promise<void>;
+
+export function ShareSend(arg1:string):Promise<void>;

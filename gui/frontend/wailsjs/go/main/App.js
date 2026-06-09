@@ -18,12 +18,28 @@ export function GetStorageDir() {
   return window['go']['main']['App']['GetStorageDir']();
 }
 
+export function GetTabFilePath(arg1) {
+  return window['go']['main']['App']['GetTabFilePath'](arg1);
+}
+
 export function NewTab() {
   return window['go']['main']['App']['NewTab']();
 }
 
+export function OpenFile(arg1) {
+  return window['go']['main']['App']['OpenFile'](arg1);
+}
+
 export function RenameTab(arg1, arg2) {
   return window['go']['main']['App']['RenameTab'](arg1, arg2);
+}
+
+export function SaveCurrentFile(arg1, arg2) {
+  return window['go']['main']['App']['SaveCurrentFile'](arg1, arg2);
+}
+
+export function SaveFileAs(arg1, arg2, arg3) {
+  return window['go']['main']['App']['SaveFileAs'](arg1, arg2, arg3);
 }
 
 export function SaveTab(arg1, arg2, arg3) {
@@ -32,4 +48,16 @@ export function SaveTab(arg1, arg2, arg3) {
 
 export function SetActiveTab(arg1) {
   return window['go']['main']['App']['SetActiveTab'](arg1);
+}
+
+export function ShareCancel() {
+  return window['go']['main']['App']['ShareCancel']();
+}
+
+export function ShareReceive(arg1) {
+  return window['go']['main']['App']['ShareReceive'](arg1);
+}
+
+export function ShareSend(arg1) {
+  return window['go']['main']['App']['ShareSend'](arg1);
 }

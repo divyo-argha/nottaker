@@ -70,12 +70,14 @@
   <!-- Status bar -->
   <footer id="statusbar" class="statusbar" role="contentinfo" aria-label="Status bar">
     <div class="statusbar__shortcuts" aria-label="Keyboard shortcuts">
-      <kbd class="kbd">Ctrl</kbd><span>+</span><kbd class="kbd">N</kbd><span class="shortcut-label">new</span>
-      <kbd class="kbd">Ctrl</kbd><span>+</span><kbd class="kbd">W</kbd><span class="shortcut-label">close</span>
-      <kbd class="kbd">Ctrl</kbd><span>+</span><kbd class="kbd">Tab</kbd><span class="shortcut-label">next tab</span>
-      <kbd class="kbd">Ctrl</kbd><span>+</span><kbd class="kbd">Shift</kbd><span>+</span><kbd class="kbd">Tab</kbd><span class="shortcut-label">prev tab</span>
+      <kbd class="kbd">⌘/Ctrl</kbd><span>+</span><kbd class="kbd">N</kbd><span class="shortcut-label">new</span>
+      <kbd class="kbd">⌘/Ctrl</kbd><span>+</span><kbd class="kbd">W</kbd><span class="shortcut-label">close</span>
+      <kbd class="kbd">⌘/Ctrl</kbd><span>+</span><kbd class="kbd">O</kbd><span class="shortcut-label">open</span>
+      <kbd class="kbd">⌘/Ctrl</kbd><span>+</span><kbd class="kbd">S</kbd><span class="shortcut-label">save</span>
+      <kbd class="kbd">⌘/Ctrl</kbd><span>+</span><kbd class="kbd">Tab</kbd><span class="shortcut-label">next tab</span>
     </div>
     <div class="statusbar__meta" aria-live="polite" aria-atomic="true">
+      <span id="status-file" class="status-file" aria-label="Current file" hidden></span>
       <span id="status-save" class="status-indicator status-indicator--saved" aria-label="Save status">
         <svg class="status-icon" width="8" height="8" viewBox="0 0 8 8" aria-hidden="true"><circle cx="4" cy="4" r="4"/></svg>
         <span id="status-save-text">saved</span>
@@ -204,6 +206,44 @@
       <!-- Error -->
       <p id="share-error" class="share-error" aria-live="assertive" hidden></p>
 
+    </div>
+  </div>
+
+  <!-- Open-file modal -->
+  <div id="open-modal" class="open-modal" role="dialog" aria-modal="true" aria-label="Open file" hidden>
+    <div class="open-modal__backdrop"></div>
+    <div class="open-modal__panel">
+      <div class="open-modal__header">
+        <span class="open-modal__title">Open File</span>
+        <button id="open-modal-close" class="share-modal__close" aria-label="Close">×</button>
+      </div>
+      <label class="share-label" for="open-path-input">File path</label>
+      <input id="open-path-input" class="share-code-input" type="text"
+        placeholder="/Users/you/notes.md or ~/docs/file.txt"
+        autocomplete="off" spellcheck="false" aria-label="File path to open" />
+      <p id="open-modal-err" class="share-error" hidden></p>
+      <div class="open-modal__actions">
+        <button id="open-modal-confirm" class="share-confirm-btn">Open</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save-as modal -->
+  <div id="saveas-modal" class="open-modal" role="dialog" aria-modal="true" aria-label="Save file as" hidden>
+    <div class="open-modal__backdrop"></div>
+    <div class="open-modal__panel">
+      <div class="open-modal__header">
+        <span class="open-modal__title">Save As</span>
+        <button id="saveas-modal-close" class="share-modal__close" aria-label="Close">×</button>
+      </div>
+      <label class="share-label" for="saveas-path-input">Save to path</label>
+      <input id="saveas-path-input" class="share-code-input" type="text"
+        placeholder="/Users/you/notes.md"
+        autocomplete="off" spellcheck="false" aria-label="Destination file path" />
+      <p id="saveas-modal-err" class="share-error" hidden></p>
+      <div class="open-modal__actions">
+        <button id="saveas-modal-confirm" class="share-confirm-btn">Save</button>
+      </div>
     </div>
   </div>
 

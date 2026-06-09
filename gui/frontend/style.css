@@ -887,3 +887,75 @@ button:focus:not(:focus-visible) {
     animation: none;
   }
 }
+
+/* ── Open / Save-as modal (reuses share modal aesthetics) ──────────────────── */
+
+.open-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.open-modal[hidden] { display: none; }
+
+.open-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: backdrop-in 200ms var(--ease-out) forwards;
+}
+
+.open-modal__panel {
+  position: relative;
+  z-index: 1;
+  width: min(440px, 92vw);
+  background: var(--col-surface);
+  border: 1px solid var(--col-border);
+  border-radius: var(--radius-md);
+  box-shadow:
+    0 0 0 1px oklch(55% 0.24 293 / 12%),
+    0 24px 60px rgba(0, 0, 0, 0.6),
+    0 0 40px oklch(55% 0.24 293 / 8%);
+  padding: var(--space-lg);
+  animation: modal-in 220ms var(--ease-out) forwards;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.open-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.open-modal__title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--col-text);
+}
+
+.open-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+}
+
+/* ── Status bar file indicator ─────────────────────────────────────────────── */
+
+.status-file {
+  font-family: var(--font-editor);
+  font-size: var(--font-size-sm);
+  color: var(--col-success);
+  white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-file[hidden] { display: none; }

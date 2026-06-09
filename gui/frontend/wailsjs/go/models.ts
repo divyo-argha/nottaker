@@ -9,6 +9,8 @@ export namespace core {
 	    created_at: any;
 	    // Go type: time
 	    updated_at: any;
+	    file_path?: string;
+	    file_is_dirty?: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Tab(source);
@@ -22,6 +24,8 @@ export namespace core {
 	        this.cursor_line = source["cursor_line"];
 	        this.created_at = this.convertValues(source["created_at"], null);
 	        this.updated_at = this.convertValues(source["updated_at"], null);
+	        this.file_path = source["file_path"];
+	        this.file_is_dirty = source["file_is_dirty"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

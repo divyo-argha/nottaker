@@ -1,6 +1,3 @@
-const SAVE_DEBOUNCE_MS = 50;
-const DOUBLE_CLICK_RENAME_MS = 250;
-
 const tabbar       = document.getElementById('tabbar');
 const btnNewTab    = document.getElementById('btn-new-tab');
 const editor       = document.getElementById('editor');
@@ -8,13 +5,32 @@ const statusSave   = document.getElementById('status-save');
 const statusSaveTx = document.getElementById('status-save-text');
 const statusPos    = document.getElementById('status-pos');
 const statusTabs   = document.getElementById('status-tabs');
+const statusFile   = document.getElementById('status-file');
 const btnMinimize  = document.getElementById('btn-minimize');
 const btnMaximize  = document.getElementById('btn-maximize');
 const btnClose     = document.getElementById('btn-close');
 
+// Open / Save-as modal elements
+const openModal        = document.getElementById('open-modal');
+const openPathInput    = document.getElementById('open-path-input');
+const openModalErr     = document.getElementById('open-modal-err');
+const openModalConfirm = document.getElementById('open-modal-confirm');
+const openModalClose   = document.getElementById('open-modal-close');
+const saveasModal        = document.getElementById('saveas-modal');
+const saveasPathInput    = document.getElementById('saveas-path-input');
+const saveasModalErr     = document.getElementById('saveas-modal-err');
+const saveasModalConfirm = document.getElementById('saveas-modal-confirm');
+const saveasModalClose   = document.getElementById('saveas-modal-close');
+
 let state = { tabs: [], active_index: 0 };
 let saveTimer = null;
 let saving = false;
+// Track whether a pending close-tab should happen after save-as completes.
+let pendingCloseAfterSave = false;
+
+
+const SAVE_DEBOUNCE_MS = 50;
+const DOUBLE_CLICK_RENAME_MS = 250;
 
 async function init() {
   try {
@@ -49,7 +65,10 @@ function renderTabs() {
 
     const titleSpan = document.createElement('span');
     titleSpan.className = 'tab__title';
-    titleSpan.textContent = tab.title;
+    // Show ● unsaved dot when tab has content but no saved file path.
+    const isUnsaved = tab.file_is_dirty || (!tab.file_path && (tab.body || '').trim().length > 0);
+    titleSpan.textContent = (isUnsaved ? '● ' : '') + tab.title;
+    if (isUnsaved) titleSpan.style.color = '#f59e0b';
 
     const closeBtn = document.createElement('button');
     closeBtn.className = 'tab__close';
@@ -90,6 +109,7 @@ function loadActiveTabIntoEditor() {
     editor.setSelectionRange(pos, pos);
   } catch (_) {}
   editor.focus();
+  updateFileStatus();
 }
 
 function scheduleSave() {
@@ -197,13 +217,18 @@ function startRename(tabBtn, titleSpan, idx) {
 
 function onKeyDown(e) {
   if (document.activeElement?.classList.contains('tab-rename-input')) return;
-  // Don't intercept keys when share modal is open
-  if (!shareModal.hidden) return;
+  if (!shareModal.hidden || !openModal.hidden || !saveasModal.hidden) return;
 
   const ctrl = e.ctrlKey || e.metaKey;
 
   if (ctrl && e.key === 'n') { e.preventDefault(); newTab(); return; }
   if (ctrl && e.key === 'w') { e.preventDefault(); closeTab(state.active_index); return; }
+  // Cmd/Ctrl+O → open file
+  if (ctrl && e.key === 'o') { e.preventDefault(); openOpenModal(); return; }
+  // Cmd/Ctrl+S → save (Save As if no path, or overwrite)
+  if (ctrl && e.key === 's' && !e.shiftKey) { e.preventDefault(); handleSave(); return; }
+  // Cmd/Ctrl+Shift+S → Save As
+  if (ctrl && e.key === 's' && e.shiftKey) { e.preventDefault(); openSaveAsModal(); return; }
 
   if (ctrl && e.key === 'Tab' && !e.shiftKey) {
     e.preventDefault();
@@ -507,4 +532,183 @@ window.addEventListener('DOMContentLoaded', () => {
       showShareError(msg);
     });
   }, 100);
+});
+
+// ── File Open / Save ──────────────────────────────────────────────────────────
+
+function updateFileStatus() {
+  const tab = state.tabs[state.active_index];
+  if (!tab) return;
+  if (tab.file_path) {
+    const name = tab.file_path.split('/').pop();
+    statusFile.textContent = tab.file_is_dirty ? '● ' + name : '✓ ' + name;
+    statusFile.style.color = tab.file_is_dirty ? '#f59e0b' : '#10b981';
+    statusFile.removeAttribute('hidden');
+  } else {
+    statusFile.setAttribute('hidden', '');
+  }
+}
+
+// Cmd/Ctrl+S: overwrite if file known, else open Save As.
+async function handleSave() {
+  await flushSave();
+  const idx = state.active_index;
+  const tab = state.tabs[idx];
+  if (!tab) return;
+  if (tab.file_path) {
+    // Overwrite existing file.
+    const errMsg = await window.go.main.App.SaveCurrentFile(idx, editor.value);
+    if (errMsg) {
+      showFileError('save', errMsg);
+    } else {
+      tab.file_is_dirty = false;
+      setSaveStatus('saved');
+      renderTabs();
+      updateFileStatus();
+    }
+  } else {
+    openSaveAsModal();
+  }
+}
+
+// ── Open File modal ───────────────────────────────────────────────────────────
+
+function openOpenModal() {
+  openModalErr.setAttribute('hidden', '');
+  openModalErr.textContent = '';
+  openPathInput.value = '';
+  openModal.removeAttribute('hidden');
+  openPathInput.focus();
+}
+
+function closeOpenModal() {
+  openModal.setAttribute('hidden', '');
+  editor.focus();
+}
+
+async function confirmOpen() {
+  const path = openPathInput.value.trim();
+  if (!path) return;
+  openModalErr.setAttribute('hidden', '');
+  const result = await window.go.main.App.OpenFile(path);
+  if (result.error) {
+    openModalErr.textContent = result.error;
+    openModalErr.removeAttribute('hidden');
+    return;
+  }
+  closeOpenModal();
+  // Load into current (empty) tab or new tab.
+  const currentTab = state.tabs[state.active_index];
+  const currentEmpty = !currentTab?.body?.trim() && !currentTab?.file_path;
+  if (currentEmpty) {
+    const idx = state.active_index;
+    const filename = path.split('/').pop();
+    state.tabs[idx].title = filename;
+    state.tabs[idx].body = result.content;
+    state.tabs[idx].file_path = path;
+    state.tabs[idx].file_is_dirty = false;
+    editor.value = result.content;
+    // Persist via Go backend.
+    await window.go.main.App.SaveFileAs(idx, path, result.content);
+    renderTabs();
+    updateFileStatus();
+    setSaveStatus('saved');
+  } else {
+    // New tab.
+    state = await window.go.main.App.NewTab();
+    const newIdx = state.active_index;
+    const filename = path.split('/').pop();
+    await window.go.main.App.SaveFileAs(newIdx, path, result.content);
+    // Refresh state from Go (so file_path is populated).
+    state = await window.go.main.App.GetState();
+    renderTabs();
+    loadActiveTabIntoEditor();
+    updateFileStatus();
+    setSaveStatus('saved');
+  }
+}
+
+openModalConfirm.addEventListener('click', confirmOpen);
+openModalClose.addEventListener('click', closeOpenModal);
+openModal.querySelector('.open-modal__backdrop').addEventListener('click', closeOpenModal);
+openPathInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); confirmOpen(); }
+  if (e.key === 'Escape') { e.preventDefault(); closeOpenModal(); }
+  e.stopPropagation();
+});
+
+// ── Save As modal ─────────────────────────────────────────────────────────────
+
+function openSaveAsModal(afterSaveClose = false) {
+  pendingCloseAfterSave = afterSaveClose;
+  saveasModalErr.setAttribute('hidden', '');
+  saveasModalErr.textContent = '';
+  const tab = state.tabs[state.active_index];
+  saveasPathInput.value = tab?.file_path || '';
+  saveasModal.removeAttribute('hidden');
+  saveasPathInput.focus();
+  saveasPathInput.select();
+}
+
+function closeSaveAsModal() {
+  saveasModal.setAttribute('hidden', '');
+  pendingCloseAfterSave = false;
+  editor.focus();
+}
+
+async function confirmSaveAs() {
+  const path = saveasPathInput.value.trim();
+  if (!path) return;
+  saveasModalErr.setAttribute('hidden', '');
+  await flushSave();
+  const idx = state.active_index;
+  const content = editor.value;
+  const errMsg = await window.go.main.App.SaveFileAs(idx, path, content);
+  if (errMsg) {
+    saveasModalErr.textContent = errMsg;
+    saveasModalErr.removeAttribute('hidden');
+    return;
+  }
+  // Update local state.
+  state.tabs[idx].file_path = path;
+  state.tabs[idx].file_is_dirty = false;
+  state.tabs[idx].title = path.split('/').pop();
+  closeSaveAsModal();
+  renderTabs();
+  updateFileStatus();
+  setSaveStatus('saved');
+  if (pendingCloseAfterSave) {
+    pendingCloseAfterSave = false;
+    state = await window.go.main.App.CloseTab(idx);
+    renderTabs();
+    loadActiveTabIntoEditor();
+    updateFileStatus();
+  }
+}
+
+saveasModalConfirm.addEventListener('click', confirmSaveAs);
+saveasModalClose.addEventListener('click', closeSaveAsModal);
+saveasModal.querySelector('.open-modal__backdrop').addEventListener('click', closeSaveAsModal);
+saveasPathInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); confirmSaveAs(); }
+  if (e.key === 'Escape') { e.preventDefault(); closeSaveAsModal(); }
+  e.stopPropagation();
+});
+
+function showFileError(mode, msg) {
+  if (mode === 'open') {
+    openModalErr.textContent = msg;
+    openModalErr.removeAttribute('hidden');
+  } else {
+    saveasModalErr.textContent = msg;
+    saveasModalErr.removeAttribute('hidden');
+  }
+}
+
+// Escape closes any open file modal.
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (!openModal.hidden) closeOpenModal();
+    if (!saveasModal.hidden) closeSaveAsModal();
+  }
 });

@@ -219,3 +219,69 @@ func (a *App) ShareCancel() {
 		a.shareSes = nil
 	}
 }
+
+// ── File I/O ─────────────────────────────────────────────────────────────────
+
+// OpenFile reads a local file and returns its content.
+// Returns an error string (non-empty) on failure.
+func (a *App) OpenFile(path string) map[string]interface{} {
+	content, err := core.OpenFile(path)
+	if err != nil {
+		return map[string]interface{}{"error": err.Error(), "content": ""}
+	}
+	return map[string]interface{}{"error": "", "content": content}
+}
+
+// SaveFileAs writes content to path and records the file path on the active tab.
+func (a *App) SaveFileAs(tabIndex int, path, content string) string {
+	if err := core.SaveFile(path, content); err != nil {
+		return err.Error()
+	}
+	a.mu.Lock()
+	if tabIndex >= 0 && tabIndex < len(a.state.Tabs) {
+		a.state.Tabs[tabIndex].FilePath = path
+		a.state.Tabs[tabIndex].FileIsDirty = false
+		a.state.Tabs[tabIndex].Body = content
+		a.state.Tabs[tabIndex].UpdatedAt = time.Now()
+		a.storage.Save(a.state)
+	}
+	a.mu.Unlock()
+	return ""
+}
+
+// SaveCurrentFile saves content to the tab's known FilePath (must already be set).
+func (a *App) SaveCurrentFile(tabIndex int, content string) string {
+	a.mu.Lock()
+	var path string
+	if tabIndex >= 0 && tabIndex < len(a.state.Tabs) {
+		path = a.state.Tabs[tabIndex].FilePath
+	}
+	a.mu.Unlock()
+
+	if path == "" {
+		return "no file path set — use Save As first"
+	}
+	if err := core.SaveFile(path, content); err != nil {
+		return err.Error()
+	}
+	a.mu.Lock()
+	if tabIndex >= 0 && tabIndex < len(a.state.Tabs) {
+		a.state.Tabs[tabIndex].FileIsDirty = false
+		a.state.Tabs[tabIndex].Body = content
+		a.state.Tabs[tabIndex].UpdatedAt = time.Now()
+		a.storage.Save(a.state)
+	}
+	a.mu.Unlock()
+	return ""
+}
+
+// GetTabFilePath returns the on-disk file path for the given tab (empty if none).
+func (a *App) GetTabFilePath(tabIndex int) string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if tabIndex < 0 || tabIndex >= len(a.state.Tabs) {
+		return ""
+	}
+	return a.state.Tabs[tabIndex].FilePath
+}
+

@@ -27,7 +27,6 @@ const (
 	colWarn     = "#f59e0b"
 	colSuccess  = "#10b981"
 	colTabBg    = "#16213e"
-	colTabAct   = "#7c3aed"
 	colErr      = "#ef4444"
 )
 
@@ -118,7 +117,9 @@ var (
 			Foreground(lipgloss.Color(colErr)).
 			Bold(true)
 )
-			
+
+// ── Messages ──────────────────────────────────────────────────────────────────
+
 type savedMsg struct{ at time.Time }
 
 type shareDoneMsg struct{}
@@ -132,9 +133,7 @@ type shareStartedMsg struct {
 	code string
 	wait func() error
 }
-type shareWaitResultMsg struct {
-	err error
-}
+type shareWaitResultMsg struct{ err error }
 
 type fileOpenedMsg struct {
 	path    string
@@ -146,14 +145,15 @@ type fileSavedMsg struct {
 }
 type fileErrMsg struct{ err string }
 
+// ── Mode enums ────────────────────────────────────────────────────────────────
 
 type shareMode int
 
 const (
 	shareOff       shareMode = iota
 	shareSending             // waiting for peer to connect
-	shareReceive             // user typing the code
-	shareReceiving           // receiver is connecting/handshaking
+	shareReceive             // user typing the wormhole code
+	shareReceiving           // receiver connecting/handshaking
 )
 
 type filePromptMode int
@@ -162,32 +162,34 @@ const (
 	filePromptOff     filePromptMode = iota
 	filePromptOpen                   // user typing a path to open
 	filePromptSave                   // user typing a path to save-as
-	filePromptConfirm                // confirming close of dirty file (Y/N/Esc)
+	filePromptConfirm                // Y/N/Esc: save before close?
 )
 
+// ── Model ─────────────────────────────────────────────────────────────────────
 
 type model struct {
-	storage   *core.Storage
-	state     core.State
+	storage  *core.Storage
+	state    core.State
 	textareas []textarea.Model
-	width     int
-	height    int
+	width    int
+	height   int
 	lastSaved time.Time
-	dirty     bool
-	quitting  bool
+	dirty    bool
+	quitting bool
 
 	// share state
 	shareMode   shareMode
-	shareCode   string // generated code shown to sender
-	shareInput  string // code being typed by receiver
-	shareErr    string // last share error message
+	shareCode   string
+	shareInput  string
+	shareErr    string
 	shareCancel context.CancelFunc
 
 	// file I/O state
 	fileMode         filePromptMode
-	fileInput        string // text being typed in the path/confirm prompt
-	fileErr          string // last file I/O error message
-	filePendingClose bool   // true when close-tab is waiting for a save confirmation
+	fileInput        string // typed path or Y/N
+	fileErr          string
+	filePendingClose bool // waiting for save before closing tab
+	fileSubmitting   bool // async op in flight; block further edits
 }
 
 func initialModel(s *core.Storage, st core.State) model {
@@ -196,14 +198,12 @@ func initialModel(s *core.Storage, st core.State) model {
 		tas[i] = newTextArea()
 		tas[i].SetValue(tab.Body)
 	}
-
 	m := model{
 		storage:   s,
 		state:     st,
 		textareas: tas,
 		lastSaved: time.Now(),
 	}
-
 	if m.state.ActiveIndex < len(m.textareas) {
 		m.textareas[m.state.ActiveIndex].Focus()
 	}
@@ -218,25 +218,23 @@ func newTextArea() textarea.Model {
 	ta.SetWidth(80)
 	ta.SetHeight(20)
 	ta.FocusedStyle.CursorLine = lipgloss.NewStyle().Background(lipgloss.Color("#1e1e3f"))
-	ta.FocusedStyle.Base = lipgloss.NewStyle().
-		Foreground(lipgloss.Color(colText))
-	ta.BlurredStyle.Base = lipgloss.NewStyle().
-		Foreground(lipgloss.Color(colMuted))
+	ta.FocusedStyle.Base = lipgloss.NewStyle().Foreground(lipgloss.Color(colText))
+	ta.BlurredStyle.Base = lipgloss.NewStyle().Foreground(lipgloss.Color(colMuted))
 	ta.FocusedStyle.Placeholder = lipgloss.NewStyle().Foreground(lipgloss.Color(colMuted))
 	ta.BlurredStyle.Placeholder = lipgloss.NewStyle().Foreground(lipgloss.Color(colBorder))
 	return ta
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
+func (m model) Init() tea.Cmd { return textarea.Blink }
 
-func (m model) Init() tea.Cmd {
-	return textarea.Blink
-}
+// ── Update ────────────────────────────────────────────────────────────────────
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
+
+	// ── Async results ─────────────────────────────────────────────────────────
 
 	case shareDoneMsg:
 		m.shareMode = shareOff
@@ -250,22 +248,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case shareStartedMsg:
 		m.shareCode = msg.code
 		m.shareErr = ""
-		return m, func() tea.Msg {
-			err := msg.wait()
-			return shareWaitResultMsg{err: err}
-		}
+		return m, func() tea.Msg { return shareWaitResultMsg{err: msg.wait()} }
 
 	case shareWaitResultMsg:
 		if m.shareMode != shareSending {
-			// User cancelled in the meantime, ignore.
+			// User cancelled — ignore.
 			return m, nil
 		}
 		m.shareMode = shareOff
 		m.shareCode = ""
 		if msg.err != nil {
 			m.shareErr = msg.err.Error()
-		} else {
-			m.shareErr = ""
 		}
 
 	case shareErrMsg:
@@ -278,7 +271,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.shareMode = shareOff
 		m.shareInput = ""
 		m.shareErr = ""
-
 		tas := make([]textarea.Model, len(m.state.Tabs))
 		for i, tab := range m.state.Tabs {
 			tas[i] = newTextArea()
@@ -290,11 +282,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m = m.resizeTextAreas()
 
-	// ── File I/O messages ─────────────────────────────────────────────────────
 	case fileOpenedMsg:
 		m.fileMode = filePromptOff
 		m.fileInput = ""
 		m.fileErr = ""
+		m.fileSubmitting = false
 		m = m.loadFileIntoTab(msg.path, msg.content)
 		m.triggerSave()
 
@@ -302,13 +294,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.fileMode = filePromptOff
 		m.fileInput = ""
 		m.fileErr = ""
+		m.fileSubmitting = false
 		idx := m.state.ActiveIndex
 		m.state.Tabs[idx].FilePath = msg.path
 		m.state.Tabs[idx].FileIsDirty = false
 		m.lastSaved = msg.at
 		m.dirty = false
 		m.triggerSave()
-	
 		if m.filePendingClose {
 			m.filePendingClose = false
 			m = m.closeTab()
@@ -319,227 +311,24 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.fileErr = msg.err
 		m.fileMode = filePromptOff
 		m.fileInput = ""
+		m.fileSubmitting = false
 		m.filePendingClose = false
 
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
 		m = m.resizeTextAreas()
+
 	case savedMsg:
 		m.lastSaved = msg.at
 		m.dirty = false
 
+	// ── Key handling ──────────────────────────────────────────────────────────
 	case tea.KeyMsg:
-
-		if m.fileErr != "" {
-			m.fileErr = ""
-		}
-
-		if m.fileMode == filePromptConfirm {
-			switch strings.ToLower(msg.String()) {
-			case "y":
-				idx := m.state.ActiveIndex
-				path := m.state.Tabs[idx].FilePath
-				content := m.textareas[idx].Value()
-				m.filePendingClose = true
-				m.fileMode = filePromptOff
-				cmds = append(cmds, func() tea.Msg {
-					if err := core.SaveFile(path, content); err != nil {
-						return fileErrMsg{err: err.Error()}
-					}
-					return fileSavedMsg{path: path, at: time.Now()}
-				})
-			case "n":
-				m.fileMode = filePromptOff
-				m.filePendingClose = false
-				m = m.closeTab()
-				m.triggerSave()
-			default:
-				if msg.Type == tea.KeyEscape || msg.Type == tea.KeyCtrlC {
-					m.fileMode = filePromptOff
-					m.filePendingClose = false
-				}
-			}
-			return m, tea.Batch(cmds...)
-		}
-
-		if m.fileMode == filePromptOpen || m.fileMode == filePromptSave {
-			switch msg.Type {
-			case tea.KeyEscape, tea.KeyCtrlC:
-				m.fileMode = filePromptOff
-				m.fileInput = ""
-				m.filePendingClose = false
-			case tea.KeyEnter:
-				path := strings.TrimSpace(m.fileInput)
-				if path == "" {
-					break
-				}
-				if m.fileMode == filePromptOpen {
-					cmds = append(cmds, func() tea.Msg {
-						content, err := core.OpenFile(path)
-						if err != nil {
-							return fileErrMsg{err: err.Error()}
-						}
-						return fileOpenedMsg{path: path, content: content}
-					})
-				} else {
-					// save-as
-					content := m.textareas[m.state.ActiveIndex].Value()
-					pending := m.filePendingClose
-					cmds = append(cmds, func() tea.Msg {
-						_ = pending // captured for post-save close logic via filePendingClose field
-						if err := core.SaveFile(path, content); err != nil {
-							return fileErrMsg{err: err.Error()}
-						}
-						return fileSavedMsg{path: path, at: time.Now()}
-					})
-				}
-			case tea.KeyBackspace:
-				if len(m.fileInput) > 0 {
-					runes := []rune(m.fileInput)
-					m.fileInput = string(runes[:len(runes)-1])
-				}
-			default:
-				if msg.Type == tea.KeyRunes || msg.Type == tea.KeySpace {
-					m.fileInput += msg.String()
-				}
-			}
-			return m, tea.Batch(cmds...)
-		}
-
-		if m.shareMode == shareReceive || m.shareMode == shareReceiving {
-			if m.shareMode == shareReceiving {
-				switch msg.Type {
-				case tea.KeyEscape, tea.KeyCtrlC:
-					if m.shareCancel != nil {
-						m.shareCancel()
-					}
-					m.shareMode = shareOff
-					m.shareInput = ""
-					m.shareErr = ""
-				}
-				return m, nil
-			}
-
-			switch msg.Type {
-			case tea.KeyEscape, tea.KeyCtrlC:
-				if m.shareCancel != nil {
-					m.shareCancel()
-				}
-				m.shareMode = shareOff
-				m.shareInput = ""
-				m.shareErr = ""
-			case tea.KeyEnter:
-				code := strings.TrimSpace(m.shareInput)
-				if code != "" {
-					ctx, cancel := context.WithCancel(context.Background())
-					m.shareCancel = cancel
-					m.shareMode = shareReceiving
-					s := m.storage
-					st := m.state
-					cmds = append(cmds, func() tea.Msg {
-						res, err := core.ShareReceive(ctx, code)
-						if err != nil {
-							if ctx.Err() != nil {
-								return nil
-							}
-							return shareErrMsg{err: err.Error()}
-						}
-						newTab := core.Tab{
-							ID:        fmt.Sprintf("%x", time.Now().UnixNano()),
-							Title:     res.TabTitle,
-							Body:      res.Body,
-							CreatedAt: time.Now(),
-							UpdatedAt: time.Now(),
-						}
-						st.Tabs = append(st.Tabs, newTab)
-						st.ActiveIndex = len(st.Tabs) - 1
-						s.Save(st)
-						return shareReceivedMsg{title: res.TabTitle, st: st}
-					})
-				}
-			case tea.KeyBackspace:
-				if len(m.shareInput) > 0 {
-					m.shareInput = m.shareInput[:len(m.shareInput)-1]
-				}
-			case tea.KeyRunes:
-				m.shareInput += msg.String()
-			}
-			return m, tea.Batch(cmds...)
-		}
-
-		// ── Normal mode ───────────────────────────────────────────────────────
-		if m.shareErr != "" {
-			m.shareErr = ""
-		}
-
-		switch msg.Type {
-
-		case tea.KeyCtrlC:
-			if m.shareMode == shareSending && m.shareCancel != nil {
-				m.shareCancel()
-				m.shareMode = shareOff
-				m.shareCode = ""
-				return m, nil
-			}
-			m.syncSaveNow()
-			m.quitting = true
-			return m, tea.Quit
-
-		case tea.KeyCtrlRight, tea.KeyCtrlF:
-			m = m.switchTab((m.state.ActiveIndex + 1) % len(m.state.Tabs))
-
-		case tea.KeyCtrlLeft, tea.KeyCtrlB:
-			idx := m.state.ActiveIndex - 1
-			if idx < 0 {
-				idx = len(m.state.Tabs) - 1
-			}
-			m = m.switchTab(idx)
-
-		case tea.KeyTab:
-			m = m.switchTab((m.state.ActiveIndex + 1) % len(m.state.Tabs))
-
-		case tea.KeyCtrlN:
-			m = m.newTab()
-			m.triggerSave()
-
-		case tea.KeyCtrlW:
-			m, cmds = m.handleClose(cmds)
-
-		case tea.KeyCtrlO:
-			m.fileMode = filePromptOpen
-			m.fileInput = ""
-
-		default:
-			if msg.Type == tea.KeyRunes && !msg.Alt {
-				idx := m.state.ActiveIndex
-				updated, cmd := m.textareas[idx].Update(msg)
-				m.textareas[idx] = updated
-				cmds = append(cmds, cmd)
-				m.syncTabBody(idx)
-				break
-			}
-
-			if msg.Type == tea.KeyCtrlS && !msg.Alt {
-				m, cmds = m.handleSave(cmds)
-				break
-			}
-
-			if msg.Type == tea.KeyCtrlR {
-				m.shareMode = shareReceive
-				m.shareInput = ""
-				m.shareErr = ""
-				break
-			}
-
-			idx := m.state.ActiveIndex
-			updated, cmd := m.textareas[idx].Update(msg)
-			m.textareas[idx] = updated
-			cmds = append(cmds, cmd)
-			m.syncTabBody(idx)
-		}
+		return m.handleKey(msg, cmds)
 	}
 
+	// Propagate non-key messages (blink tick, etc.) to active textarea.
 	if _, ok := msg.(tea.KeyMsg); !ok {
 		idx := m.state.ActiveIndex
 		if idx < len(m.textareas) {
@@ -552,6 +341,244 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+// handleKey is the single entry point for all keyboard input.
+// It is extracted to keep Update clean and to avoid break/fallthrough confusion.
+func (m model) handleKey(msg tea.KeyMsg, cmds []tea.Cmd) (tea.Model, tea.Cmd) {
+	// Clear stale errors on any key.
+	m.fileErr = ""
+	m.shareErr = ""
+
+	// ── File close-confirm prompt (Y / N / Esc) ───────────────────────────────
+	if m.fileMode == filePromptConfirm {
+		switch strings.ToLower(msg.String()) {
+		case "y":
+			idx := m.state.ActiveIndex
+			path := m.state.Tabs[idx].FilePath
+			content := m.textareas[idx].Value()
+			m.filePendingClose = true
+			m.fileMode = filePromptOff
+			cmds = append(cmds, func() tea.Msg {
+				if err := core.SaveFile(path, content); err != nil {
+					return fileErrMsg{err: err.Error()}
+				}
+				return fileSavedMsg{path: path, at: time.Now()}
+			})
+		case "n":
+			m.fileMode = filePromptOff
+			m.filePendingClose = false
+			m = m.closeTab()
+			m.triggerSave()
+		default:
+			if msg.Type == tea.KeyEscape || msg.Type == tea.KeyCtrlC {
+				m.fileMode = filePromptOff
+				m.filePendingClose = false
+			}
+		}
+		return m, tea.Batch(cmds...)
+	}
+
+	// ── File path prompts (Open / Save-as) ───────────────────────────────────
+	if m.fileMode == filePromptOpen || m.fileMode == filePromptSave {
+		// If we're waiting for the async op (fileSubmitting), ignore all keys
+		// except Escape so the user can't double-submit or corrupt state.
+		if m.fileSubmitting {
+			if msg.Type == tea.KeyEscape || msg.Type == tea.KeyCtrlC {
+				m.fileMode = filePromptOff
+				m.fileInput = ""
+				m.fileSubmitting = false
+				m.filePendingClose = false
+			}
+			return m, tea.Batch(cmds...)
+		}
+
+		switch msg.Type {
+		case tea.KeyEscape, tea.KeyCtrlC:
+			m.fileMode = filePromptOff
+			m.fileInput = ""
+			m.filePendingClose = false
+
+		case tea.KeyEnter:
+			path := strings.TrimSpace(m.fileInput)
+			if path == "" {
+				return m, tea.Batch(cmds...)
+			}
+			mode := m.fileMode
+			content := m.textareas[m.state.ActiveIndex].Value()
+			m.fileSubmitting = true
+			cmds = append(cmds, func() tea.Msg {
+				if mode == filePromptOpen {
+					content, err := core.OpenFile(path)
+					if err != nil {
+						return fileErrMsg{err: err.Error()}
+					}
+					return fileOpenedMsg{path: path, content: content}
+				}
+				// Save-as
+				if err := core.SaveFile(path, content); err != nil {
+					return fileErrMsg{err: err.Error()}
+				}
+				return fileSavedMsg{path: path, at: time.Now()}
+			})
+			// fileMode stays set; fileSubmitting prevents further edits until
+			// the async result resets everything.
+
+		case tea.KeyBackspace, tea.KeyCtrlH:
+			// Ctrl+H is the ASCII backspace (0x08) sent by many terminals.
+			if len(m.fileInput) > 0 {
+				runes := []rune(m.fileInput)
+				m.fileInput = string(runes[:len(runes)-1])
+			}
+
+		case tea.KeyCtrlW:
+			// Delete the last word (like readline's Ctrl+W).
+			m.fileInput = deleteLastWord(m.fileInput)
+
+		case tea.KeyCtrlU:
+			// Clear the entire input line (like readline's Ctrl+U).
+			m.fileInput = ""
+
+		default:
+			// Accept all printable runes including / . ~ - _
+			if msg.Type == tea.KeyRunes || msg.Type == tea.KeySpace {
+				m.fileInput += msg.String()
+			}
+		}
+		return m, tea.Batch(cmds...)
+	}
+
+	// ── Wormhole receive mode: user typing a share code ───────────────────────
+	if m.shareMode == shareReceiving {
+		if msg.Type == tea.KeyEscape || msg.Type == tea.KeyCtrlC {
+			if m.shareCancel != nil {
+				m.shareCancel()
+			}
+			m.shareMode = shareOff
+			m.shareInput = ""
+		}
+		return m, tea.Batch(cmds...)
+	}
+	if m.shareMode == shareReceive {
+		switch msg.Type {
+		case tea.KeyEscape, tea.KeyCtrlC:
+			if m.shareCancel != nil {
+				m.shareCancel()
+			}
+			m.shareMode = shareOff
+			m.shareInput = ""
+		case tea.KeyEnter:
+			code := strings.TrimSpace(m.shareInput)
+			if code != "" {
+				ctx, cancel := context.WithCancel(context.Background())
+				m.shareCancel = cancel
+				m.shareMode = shareReceiving
+				s := m.storage
+				st := m.state
+				cmds = append(cmds, func() tea.Msg {
+					res, err := core.ShareReceive(ctx, code)
+					if err != nil {
+						if ctx.Err() != nil {
+							return nil
+						}
+						return shareErrMsg{err: err.Error()}
+					}
+					newTab := core.Tab{
+						ID:        fmt.Sprintf("%x", time.Now().UnixNano()),
+						Title:     res.TabTitle,
+						Body:      res.Body,
+						CreatedAt: time.Now(),
+						UpdatedAt: time.Now(),
+					}
+					st.Tabs = append(st.Tabs, newTab)
+					st.ActiveIndex = len(st.Tabs) - 1
+					s.Save(st)
+					return shareReceivedMsg{title: res.TabTitle, st: st}
+				})
+			}
+		case tea.KeyBackspace:
+			if len(m.shareInput) > 0 {
+				m.shareInput = m.shareInput[:len(m.shareInput)-1]
+			}
+		case tea.KeyRunes:
+			m.shareInput += msg.String()
+		}
+		return m, tea.Batch(cmds...)
+	}
+
+	// ── Normal mode ───────────────────────────────────────────────────────────
+
+	switch msg.Type {
+
+	case tea.KeyCtrlC:
+		// Cancel sharing if active; otherwise quit.
+		if m.shareMode == shareSending && m.shareCancel != nil {
+			m.shareCancel()
+			m.shareMode = shareOff
+			m.shareCode = ""
+			return m, nil
+		}
+		m.syncSaveNow()
+		m.quitting = true
+		return m, tea.Quit
+
+	case tea.KeyCtrlRight, tea.KeyCtrlF:
+		m = m.switchTab((m.state.ActiveIndex + 1) % len(m.state.Tabs))
+
+	case tea.KeyCtrlLeft, tea.KeyCtrlB:
+		idx := m.state.ActiveIndex - 1
+		if idx < 0 {
+			idx = len(m.state.Tabs) - 1
+		}
+		m = m.switchTab(idx)
+
+	case tea.KeyTab:
+		m = m.switchTab((m.state.ActiveIndex + 1) % len(m.state.Tabs))
+
+	case tea.KeyCtrlN, tea.KeyF5:
+		m = m.newTab()
+		m.triggerSave()
+
+	// Ctrl+X or F4 → close tab (Ctrl+W is intercepted by macOS Terminal.app)
+	case tea.KeyCtrlX, tea.KeyF4:
+		m, cmds = m.handleClose(cmds)
+
+	// Ctrl+O or F3 → open file
+	case tea.KeyCtrlO, tea.KeyF3:
+		m.fileMode = filePromptOpen
+		m.fileInput = ""
+		m.fileSubmitting = false
+
+	// Ctrl+S or F2 → save to disk
+	case tea.KeyCtrlS, tea.KeyF2:
+		m, cmds = m.handleSave(cmds)
+
+	// Ctrl+T → share active tab via wormhole (T for Transfer)
+	case tea.KeyCtrlT:
+		cmds = m.doShare(cmds)
+
+	// Ctrl+R → receive from wormhole
+	case tea.KeyCtrlR:
+		m.shareMode = shareReceive
+		m.shareInput = ""
+
+	default:
+		// All other keys (printable runes, arrows, etc.) go to the active textarea.
+		idx := m.state.ActiveIndex
+		updated, cmd := m.textareas[idx].Update(msg)
+		m.textareas[idx] = updated
+		cmds = append(cmds, cmd)
+		if msg.Type == tea.KeyRunes || msg.Type == tea.KeyBackspace ||
+			msg.Type == tea.KeyDelete || msg.Type == tea.KeyEnter {
+			m.syncTabBody(idx)
+		}
+	}
+
+	return m, tea.Batch(cmds...)
+}
+
+// ── File / share helpers ──────────────────────────────────────────────────────
+
+// handleClose implements Ctrl+X (close tab).
+// Prompts before closing if there are unsaved-to-disk changes.
 func (m model) handleClose(cmds []tea.Cmd) (model, []tea.Cmd) {
 	idx := m.state.ActiveIndex
 	tab := m.state.Tabs[idx]
@@ -564,6 +591,7 @@ func (m model) handleClose(cmds []tea.Cmd) (model, []tea.Cmd) {
 	}
 
 	if tab.FilePath == "" && strings.TrimSpace(content) != "" {
+		// New tab with content — ask where to save before closing.
 		m.fileMode = filePromptSave
 		m.fileInput = ""
 		m.filePendingClose = true
@@ -575,13 +603,14 @@ func (m model) handleClose(cmds []tea.Cmd) (model, []tea.Cmd) {
 	return m, cmds
 }
 
+// handleSave implements Ctrl+S.
 func (m model) handleSave(cmds []tea.Cmd) (model, []tea.Cmd) {
 	idx := m.state.ActiveIndex
-	tab := m.state.Tabs[idx]
+	path := m.state.Tabs[idx].FilePath
 	content := m.textareas[idx].Value()
 
-	if tab.FilePath != "" {
-		path := tab.FilePath
+	if path != "" {
+		// Known file → overwrite silently.
 		cmds = append(cmds, func() tea.Msg {
 			if err := core.SaveFile(path, content); err != nil {
 				return fileErrMsg{err: err.Error()}
@@ -589,13 +618,15 @@ func (m model) handleSave(cmds []tea.Cmd) (model, []tea.Cmd) {
 			return fileSavedMsg{path: path, at: time.Now()}
 		})
 	} else {
+		// New tab → prompt for destination path.
 		m.fileMode = filePromptSave
 		m.fileInput = ""
 	}
 	return m, cmds
 }
 
-func (m *model) shareActiveTab(cmds []tea.Cmd) []tea.Cmd {
+// doShare starts a Magic Wormhole send (Ctrl+T).
+func (m model) doShare(cmds []tea.Cmd) []tea.Cmd {
 	if m.shareMode == shareSending {
 		return cmds
 	}
@@ -615,6 +646,7 @@ func (m *model) shareActiveTab(cmds []tea.Cmd) []tea.Cmd {
 	return cmds
 }
 
+// syncTabBody copies the textarea value back to the state and marks dirty.
 func (m *model) syncTabBody(idx int) {
 	m.state.Tabs[idx].Body = m.textareas[idx].Value()
 	m.state.Tabs[idx].CursorLine = m.textareas[idx].Line()
@@ -637,20 +669,15 @@ func (m model) View() string {
 	}
 
 	var b strings.Builder
-
 	title := styleTitle.Render("✦ octonote")
 	tabCount := styleTabCount.Render(fmt.Sprintf(" %d tab(s)", len(m.state.Tabs)))
 	b.WriteString(lipgloss.JoinHorizontal(lipgloss.Left, title, tabCount))
 	b.WriteString("\n")
-
 	b.WriteString(m.renderTabBar())
 	b.WriteString("\n")
-
 	b.WriteString(m.renderContent())
 	b.WriteString("\n")
-
 	b.WriteString(m.renderLegend())
-
 	return b.String()
 }
 
@@ -658,13 +685,12 @@ func (m model) renderTabBar() string {
 	tabs := make([]string, len(m.state.Tabs))
 	for i, tab := range m.state.Tabs {
 		label := truncate(tab.Title, 14)
-
+		// Show ● when content is unsaved to disk.
 		unsaved := (tab.FilePath == "" && strings.TrimSpace(m.textareas[i].Value()) != "") ||
 			(tab.FilePath != "" && tab.FileIsDirty)
 		if unsaved {
 			label = "● " + label
 		}
-
 		if i == m.state.ActiveIndex {
 			tabs[i] = styleTabActive.Render(fmt.Sprintf(" %d: %s ", i+1, label))
 		} else {
@@ -680,13 +706,11 @@ func (m model) renderContent() string {
 	if idx >= len(m.textareas) {
 		return ""
 	}
-
 	contentH := m.height - 8
 	if contentH < 4 {
 		contentH = 4
 	}
 	contentW := m.width - 4
-
 	m.textareas[idx].SetWidth(contentW)
 	m.textareas[idx].SetHeight(contentH)
 
@@ -696,19 +720,16 @@ func (m model) renderContent() string {
 	} else {
 		box = styleContentBoxBlur
 	}
-
-	return box.
-		Width(m.width - 2).
-		Render(m.textareas[idx].View())
+	return box.Width(m.width - 2).Render(m.textareas[idx].View())
 }
 
 func (m model) renderLegend() string {
+	// File I/O error banner.
 	if m.fileErr != "" {
-		return styleLegend.Width(m.width).Render(
-			styleFileErr.Render("✗ " + m.fileErr),
-		)
+		return styleLegend.Width(m.width).Render(styleFileErr.Render("✗ " + m.fileErr))
 	}
 
+	// Close-confirm prompt.
 	if m.fileMode == filePromptConfirm {
 		msg := styleFileErr.Render("Unsaved changes!") +
 			styleFilePrompt.Render("  Save before closing?  ") +
@@ -718,22 +739,41 @@ func (m model) renderLegend() string {
 		return styleLegend.Width(m.width).Render(msg)
 	}
 
+	// Open-file prompt.
 	if m.fileMode == filePromptOpen {
+		if m.fileSubmitting {
+			return styleLegend.Width(m.width).Render(
+				styleFilePrompt.Render("Opening ") + styleFileInput.Render(m.fileInput) +
+					styleFilePrompt.Render("  …"),
+			)
+		}
 		input := styleFileInput.Render(m.fileInput + "▌")
 		prompt := styleFilePrompt.Render("Open: ") + input +
 			styleFilePrompt.Render("  ") + styleKey.Render("↵") +
-			styleFilePrompt.Render(" open  ") + styleKey.Render("Esc") + " cancel"
+			styleFilePrompt.Render(" open  ") + styleKey.Render("^U") + " clear  " +
+			styleKey.Render("^W") + " del-word  " +
+			styleKey.Render("Esc") + " cancel"
 		return styleLegend.Width(m.width).Render(prompt)
 	}
 
+	// Save-as prompt.
 	if m.fileMode == filePromptSave {
+		if m.fileSubmitting {
+			return styleLegend.Width(m.width).Render(
+				styleFilePrompt.Render("Saving ") + styleFileInput.Render(m.fileInput) +
+					styleFilePrompt.Render("  …"),
+			)
+		}
 		input := styleFileInput.Render(m.fileInput + "▌")
 		prompt := styleFilePrompt.Render("Save as: ") + input +
 			styleFilePrompt.Render("  ") + styleKey.Render("↵") +
-			styleFilePrompt.Render(" save  ") + styleKey.Render("Esc") + " cancel"
+			styleFilePrompt.Render(" save  ") + styleKey.Render("^U") + " clear  " +
+			styleKey.Render("^W") + " del-word  " +
+			styleKey.Render("Esc") + " cancel"
 		return styleLegend.Width(m.width).Render(prompt)
 	}
 
+	// Share overlays.
 	if m.shareMode == shareSending {
 		var status string
 		if m.shareCode == "connecting…" {
@@ -753,59 +793,55 @@ func (m model) renderLegend() string {
 		return styleLegend.Width(m.width).Render(prompt)
 	}
 	if m.shareMode == shareReceiving {
-		status := styleShareInfo.Render("connecting to peer…  ") +
-			styleKey.Render("Esc") + " cancel"
-		return styleLegend.Width(m.width).Render(status)
+		return styleLegend.Width(m.width).Render(
+			styleShareInfo.Render("connecting to peer…  ") + styleKey.Render("Esc") + " cancel",
+		)
 	}
 	if m.shareErr != "" {
-		errMsg := styleShareErr.Render("share error: " + m.shareErr)
-		return styleLegend.Width(m.width).Render(errMsg)
+		return styleLegend.Width(m.width).Render(styleShareErr.Render("share error: " + m.shareErr))
 	}
 
-	// ── Normal legend ─────────────────────────────────────────────────────────
+	// Normal legend.
 	shortcuts := []struct{ key, desc string }{
-		{"^N", "new"},
-		{"^W", "close"},
-		{"^O", "open"},
-		{"^S", "save"},
-		{"⇧^S", "share"},
+		{"^N/F5", "new"},
+		{"^X/F4", "close"},
+		{"^O/F3", "open"},
+		{"^S/F2", "save"},
+		{"^T", "share"},
 		{"^R", "receive"},
 		{"^→/←", "switch"},
 		{"Tab", "cycle"},
 		{"^C", "quit"},
 	}
-
 	var parts []string
 	for _, s := range shortcuts {
-		k := styleKey.Render(s.key)
-		parts = append(parts, k+" "+s.desc)
+		parts = append(parts, styleKey.Render(s.key)+" "+s.desc)
 	}
 
-	var saveStatus string
+	// Right-side save status.
 	idx := m.state.ActiveIndex
 	tab := m.state.Tabs[idx]
-	if tab.FilePath != "" && !tab.FileIsDirty {
+	var saveStatus string
+	switch {
+	case tab.FilePath != "" && !tab.FileIsDirty:
 		saveStatus = styleSaved.Render("✓ " + filepath.Base(tab.FilePath))
-	} else if tab.FilePath != "" && tab.FileIsDirty {
+	case tab.FilePath != "" && tab.FileIsDirty:
 		saveStatus = styleUnsaved.Render("● " + filepath.Base(tab.FilePath) + " (unsaved)")
-	} else if m.dirty {
-		saveStatus = styleUnsaved.Render("● unsaved (^S to save)")
-	} else {
+	case m.dirty:
+		saveStatus = styleUnsaved.Render("● unsaved  (^S/F2 to save)")
+	default:
 		saveStatus = styleSaved.Render("✓ saved " + m.lastSaved.Format("15:04:05"))
 	}
 
 	left := strings.Join(parts, "  ")
-	right := saveStatus
-
-	gap := m.width - visibleLen(left) - visibleLen(right) - 4
+	gap := m.width - visibleLen(left) - visibleLen(saveStatus) - 4
 	if gap < 1 {
 		gap = 1
 	}
-
-	return styleLegend.
-		Width(m.width).
-		Render(left + strings.Repeat(" ", gap) + right)
+	return styleLegend.Width(m.width).Render(left + strings.Repeat(" ", gap) + saveStatus)
 }
+
+// ── Tab helpers ───────────────────────────────────────────────────────────────
 
 func (m model) switchTab(idx int) model {
 	if idx < 0 || idx >= len(m.state.Tabs) {
@@ -849,11 +885,11 @@ func (m model) closeTab() model {
 	return m
 }
 
+// loadFileIntoTab puts file content into the current tab (if empty/new) or a new tab.
 func (m model) loadFileIntoTab(path, content string) model {
 	idx := m.state.ActiveIndex
-	currentContent := strings.TrimSpace(m.textareas[idx].Value())
-
-	if currentContent == "" && m.state.Tabs[idx].FilePath == "" {
+	if strings.TrimSpace(m.textareas[idx].Value()) == "" && m.state.Tabs[idx].FilePath == "" {
+		// Reuse current tab.
 		m.state.Tabs[idx].Title = filepath.Base(path)
 		m.state.Tabs[idx].Body = content
 		m.state.Tabs[idx].FilePath = path
@@ -861,10 +897,10 @@ func (m model) loadFileIntoTab(path, content string) model {
 		m.state.Tabs[idx].UpdatedAt = time.Now()
 		m.textareas[idx].SetValue(content)
 	} else {
+		// Open in a new tab.
 		tab := core.NewTab(filepath.Base(path))
 		tab.Body = content
 		tab.FilePath = path
-		tab.FileIsDirty = false
 		m.state.Tabs = append(m.state.Tabs, tab)
 		ta := newTextArea()
 		ta.SetValue(content)
@@ -876,13 +912,8 @@ func (m model) loadFileIntoTab(path, content string) model {
 	return m
 }
 
-func (m *model) triggerSave() {
-	m.storage.Save(m.state)
-}
-
-func (m *model) syncSaveNow() {
-	m.storage.Save(m.state)
-}
+func (m *model) triggerSave()  { m.storage.Save(m.state) }
+func (m *model) syncSaveNow() { m.storage.Save(m.state) }
 
 func (m model) resizeTextAreas() model {
 	contentH := m.height - 8
@@ -897,12 +928,13 @@ func (m model) resizeTextAreas() model {
 	return m
 }
 
+// ── Utilities ─────────────────────────────────────────────────────────────────
+
 func truncate(s string, max int) string {
 	if utf8.RuneCountInString(s) <= max {
 		return s
 	}
-	runes := []rune(s)
-	return string(runes[:max-1]) + "…"
+	return string([]rune(s)[:max-1]) + "…"
 }
 
 func visibleLen(s string) int {
@@ -923,6 +955,23 @@ func visibleLen(s string) int {
 	return count
 }
 
+// deleteLastWord removes the last whitespace-delimited word from s,
+// matching readline's Ctrl+W behaviour.
+func deleteLastWord(s string) string {
+	runes := []rune(strings.TrimRight(s, " \t"))
+	// walk backwards over the last word
+	i := len(runes) - 1
+	for i >= 0 && runes[i] != ' ' && runes[i] != '/' && runes[i] != '\\' {
+		i--
+	}
+	if i < 0 {
+		return ""
+	}
+	return string(runes[:i+1])
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+
 func main() {
 	s, err := core.NewStorage()
 	if err != nil {
@@ -938,12 +987,7 @@ func main() {
 	}
 
 	m := initialModel(s, st)
-	p := tea.NewProgram(
-		m,
-		tea.WithAltScreen(),
-		tea.WithMouseCellMotion(),
-	)
-
+	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "octonote: %v\n", err)
 		os.Exit(1)
