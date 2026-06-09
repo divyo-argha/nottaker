@@ -10,12 +10,14 @@ import (
 )
 
 type Tab struct {
-	ID         string    `json:"id"`
-	Title      string    `json:"title"`
-	Body       string    `json:"body"`
-	CursorLine int       `json:"cursor_line"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID          string    `json:"id"`
+	Title       string    `json:"title"`
+	Body        string    `json:"body"`
+	CursorLine  int       `json:"cursor_line"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	FilePath    string    `json:"file_path,omitempty"`    // absolute path to on-disk file, empty if unsaved
+	FileIsDirty bool      `json:"file_is_dirty,omitempty"` // true when body differs from last file save
 }
 
 type State struct {
