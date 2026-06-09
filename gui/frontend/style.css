@@ -96,10 +96,12 @@ body {
 }
 
 .titlebar__logo {
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
   object-fit: contain;
-  border-radius: 50%;
+  border-radius: 10%;
+  border: 1px solid var(--col-border);
+  padding: 1px;
   filter: drop-shadow(0 0 8px var(--col-accent));
   animation: pulse-glow 3s ease-in-out infinite;
 }
