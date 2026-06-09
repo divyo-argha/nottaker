@@ -1,5 +1,10 @@
 $repo = "divyo-argha/octonote"
-$version = "1.0.0"
+try {
+    $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/latest"
+    $version = $release.tag_name.TrimStart('v')
+} catch {
+    $version = "1.0.1"
+}
 $arch = if ($env:PROCESSOR_ARCHITECTURE -eq "AMD64") { "amd64" } else { "arm64" }
 
 $cliBinary = "octonote-windows-$arch.exe"

@@ -9,7 +9,7 @@
   "version": "2",
   "info": {
     "productName": "octoNote",
-    "productVersion": "1.0.0",
+    "productVersion": "1.0.1",
     "productIdentifier": "io.octonote.app",
     "description": "Lightweight multi-tab auto-saving scratchpad",
     "copyright": "© 2024 octoNote contributors",
