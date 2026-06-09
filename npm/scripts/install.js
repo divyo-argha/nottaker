@@ -27,6 +27,33 @@ const PLATFORM_MAP = {
   'win32-arm64':  'octonote-windows-arm64.exe',
 };
 
+const GUI_PLATFORM_MAP = {
+  'darwin-arm64': {
+    filename: 'octonote-gui-darwin-arm64',
+    candidates: ['octonote-gui-darwin', 'octonote-gui-darwin-arm64']
+  },
+  'darwin-x64': {
+    filename: 'octonote-gui-darwin-amd64',
+    candidates: ['octonote-gui-darwin', 'octonote-gui-darwin-amd64']
+  },
+  'linux-arm64': {
+    filename: 'octonote-gui-linux-arm64',
+    candidates: ['octonote-gui-linux', 'octonote-gui-linux-arm64']
+  },
+  'linux-x64': {
+    filename: 'octonote-gui-linux-amd64',
+    candidates: ['octonote-gui-linux', 'octonote-gui-linux-amd64']
+  },
+  'win32-x64': {
+    filename: 'octonote-gui-windows-amd64.exe',
+    candidates: ['octonote-gui-windows-amd64.exe']
+  },
+  'win32-arm64': {
+    filename: 'octonote-gui-windows-arm64.exe',
+    candidates: ['octonote-gui-windows-arm64.exe']
+  },
+};
+
 function log(msg)  { process.stdout.write(`[octonote] ${msg}\n`); }
 function warn(msg) { process.stderr.write(`[octonote] WARN: ${msg}\n`); }
 function fail(msg) { process.stderr.write(`[octonote] ERROR: ${msg}\n`); process.exit(1); }
@@ -103,27 +130,54 @@ async function main() {
 
   fs.mkdirSync(BIN_DIR, { recursive: true });
 
+  // 1. CLI Binary
   const destPath   = path.join(BIN_DIR, binary);
   const downloadUrl = `${GITHUB_BASE}/${binary}`;
 
   if (fs.existsSync(destPath)) {
-    log(`Binary already present: ${destPath}`);
+    log(`CLI Binary already present: ${destPath}`);
     ensureExecutable(destPath);
-    log('octonote is ready. Run: octonote');
-    return;
+  } else {
+    try {
+      await download(downloadUrl, destPath);
+      ensureExecutable(destPath);
+      log(`✓ Installed octonote CLI ${VERSION} for ${key}`);
+    } catch (err) {
+      warn(`Could not download CLI binary: ${err.message}`);
+      warn('To build from source:');
+      warn('  git clone https://github.com/divyo-argha/octonote');
+      warn('  cd octonote && go build -o bin/octonote ./tui/');
+    }
   }
 
-  try {
-    await download(downloadUrl, destPath);
-    ensureExecutable(destPath);
-    log(`✓ Installed octonote ${VERSION} for ${key}`);
-    log('Run: octonote');
-  } catch (err) {
-    warn(`Could not download binary: ${err.message}`);
-    warn('To build from source:');
-    warn('  git clone https://github.com/divyo-argha/octonote');
-    warn('  cd octonote && go build -o bin/octonote ./tui/');
+  // 2. GUI Binary
+  const guiConfig = GUI_PLATFORM_MAP[key];
+  if (guiConfig) {
+    const guiDestPath = path.join(BIN_DIR, guiConfig.filename);
+    if (fs.existsSync(guiDestPath)) {
+      log(`GUI Binary already present: ${guiDestPath}`);
+      ensureExecutable(guiDestPath);
+    } else {
+      let guiSuccess = false;
+      for (const candidate of guiConfig.candidates) {
+        const guiDownloadUrl = `${GITHUB_BASE}/${candidate}`;
+        try {
+          await download(guiDownloadUrl, guiDestPath);
+          ensureExecutable(guiDestPath);
+          guiSuccess = true;
+          log(`✓ Installed octonote-gui ${VERSION} for ${key}`);
+          break;
+        } catch (err) {
+          // If we fail on a candidate, just try the next one
+        }
+      }
+      if (!guiSuccess) {
+        warn(`Could not download GUI binary for ${key}`);
+      }
+    }
   }
+
+  log('octonote is ready. Run: octonote (TUI) or octonote-gui (Desktop GUI)');
 }
 
 function ensureExecutable(filePath) {

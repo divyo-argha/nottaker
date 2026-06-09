@@ -3,7 +3,7 @@ try {
     $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/latest"
     $version = $release.tag_name.TrimStart('v')
 } catch {
-    $version = "1.0.1"
+    $version = "1.0.2"
 }
 $arch = if ($env:PROCESSOR_ARCHITECTURE -eq "AMD64") { "amd64" } else { "arm64" }
 $binary = "octonote-windows-$arch.exe"

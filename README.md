@@ -81,11 +81,8 @@ You've tried everything:
 
 ### macOS / Linux (Bash)
 ```bash
-# Install TUI + GUI
-curl -sSfL https://raw.githubusercontent.com/divyo-argha/octonote/main/scripts/install-gui.sh | sh
-
-# Install TUI only
-curl -sSfL https://raw.githubusercontent.com/divyo-argha/octonote/main/scripts/install-cli.sh | sh
+# Install TUI & GUI in one command
+curl -sSfL https://raw.githubusercontent.com/divyo-argha/octonote/main/scripts/install.sh | sh
 ```
 
 </td>
@@ -93,22 +90,19 @@ curl -sSfL https://raw.githubusercontent.com/divyo-argha/octonote/main/scripts/i
 
 ### Windows (PowerShell)
 ```powershell
-# Install TUI + GUI
-iwr -useb https://raw.githubusercontent.com/divyo-argha/octonote/main/scripts/install-gui.ps1 | iex
-
-# Install TUI only
-iwr -useb https://raw.githubusercontent.com/divyo-argha/octonote/main/scripts/install-cli.ps1 | iex
+# Install TUI & GUI in one command
+iwr -useb https://raw.githubusercontent.com/divyo-argha/octonote/main/scripts/install.ps1 | iex
 ```
 
 </td>
 <td width="33%" valign="top">
 
-### NPM (TUI Only)
+### NPM
 ```bash
-# Install globally
+# Install TUI & GUI globally in one command
 npm install -g octonote
 
-# Run instantly without install
+# Run TUI instantly without install
 npx octonote
 ```
 
