@@ -113,13 +113,21 @@ type shareReceivedMsg struct {
 	title string
 	st    core.State
 }
+type shareStartedMsg struct {
+	code string
+	wait func() error
+}
+type shareWaitResultMsg struct {
+	err error
+}
 
 type shareMode int
 
 const (
-	shareOff     shareMode = iota
-	shareSending           // waiting for peer to connect
-	shareReceive           // user typing the code
+	shareOff       shareMode = iota
+	shareSending             // waiting for peer to connect
+	shareReceive             // user typing the code
+	shareReceiving           // receiver is connecting/handshaking
 )
 
 type model struct {
@@ -195,6 +203,27 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.shareCode = msg.code
 		m.shareErr = ""
 
+	case shareStartedMsg:
+		m.shareCode = msg.code
+		m.shareErr = ""
+		return m, func() tea.Msg {
+			err := msg.wait()
+			return shareWaitResultMsg{err: err}
+		}
+
+	case shareWaitResultMsg:
+		if m.shareMode != shareSending {
+			// User cancelled in the meantime, ignore.
+			return m, nil
+		}
+		m.shareMode = shareOff
+		m.shareCode = ""
+		if msg.err != nil {
+			m.shareErr = msg.err.Error()
+		} else {
+			m.shareErr = ""
+		}
+
 	case shareErrMsg:
 		m.shareMode = shareOff
 		m.shareCode = ""
@@ -205,7 +234,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.shareMode = shareOff
 		m.shareInput = ""
 		m.shareErr = ""
-		// Rebuild textareas to match new state
+		
 		tas := make([]textarea.Model, len(m.state.Tabs))
 		for i, tab := range m.state.Tabs {
 			tas[i] = newTextArea()
@@ -224,7 +253,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		// ── Receive-mode: user is typing a wormhole code ──
-		if m.shareMode == shareReceive {
+		if m.shareMode == shareReceive || m.shareMode == shareReceiving {
+			if m.shareMode == shareReceiving {
+				switch msg.Type {
+				case tea.KeyEscape, tea.KeyCtrlC:
+					if m.shareCancel != nil {
+						m.shareCancel()
+					}
+					m.shareMode = shareOff
+					m.shareInput = ""
+					m.shareErr = ""
+				}
+				return m, nil
+			}
+
 			switch msg.Type {
 			case tea.KeyEscape, tea.KeyCtrlC:
 				if m.shareCancel != nil {
@@ -238,6 +280,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if code != "" {
 					ctx, cancel := context.WithCancel(context.Background())
 					m.shareCancel = cancel
+					m.shareMode = shareReceiving
 					s := m.storage
 					st := m.state
 					cmds = append(cmds, func() tea.Msg {
@@ -272,6 +315,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		// ── Normal mode ──
+		if m.shareErr != "" {
+			m.shareErr = ""
+		}
+
 		switch msg.Type {
 
 		case tea.KeyCtrlC:
@@ -335,13 +382,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					if err != nil {
 						return shareErrMsg{err: err.Error()}
 					}
-					// First message: show the code
-					// We need to chain: emit code, then wait
-					// Use a secondary goroutine for wait
-					go func() {
-						wait() //nolint: errcheck
-					}()
-					return shareCodeMsg{code: code}
+					return shareStartedMsg{code: code, wait: wait}
 				})
 				break
 			}
@@ -465,6 +506,11 @@ func (m model) renderLegend() string {
 			styleShareInfo.Render("  then ") + styleKey.Render("↵") +
 			styleShareInfo.Render(" to connect  ") + styleKey.Render("Esc") + " cancel"
 		return styleLegend.Width(m.width).Render(prompt)
+	}
+	if m.shareMode == shareReceiving {
+		status := styleShareInfo.Render("connecting to peer…  ") +
+			styleKey.Render("Esc") + " cancel"
+		return styleLegend.Width(m.width).Render(status)
 	}
 	if m.shareErr != "" {
 		errMsg := styleShareErr.Render("share error: " + m.shareErr)
