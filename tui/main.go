@@ -944,12 +944,41 @@ func (m model) renderLegend() string {
 		saveStatus = styleSaved.Render("✓ saved " + m.lastSaved.Format("15:04:05"))
 	}
 
-	left := strings.Join(parts, "  ")
-	gap := m.width - visibleLen(left) - visibleLen(saveStatus) - 4
-	if gap < 1 {
-		gap = 1
+	usableWidth := m.width - 2 // styleLegend has Padding(0, 1)
+	if usableWidth < 1 {
+		usableWidth = 1
 	}
-	return styleLegend.Width(m.width).Render(left + strings.Repeat(" ", gap) + saveStatus)
+
+	var lines []string
+	currentLine := ""
+	for i, part := range parts {
+		partLen := visibleLen(part)
+		if currentLine == "" {
+			currentLine = part
+		} else {
+			if visibleLen(currentLine)+2+partLen > usableWidth {
+				lines = append(lines, currentLine)
+				currentLine = part
+			} else {
+				currentLine += "  " + part
+			}
+		}
+		if i == len(parts)-1 {
+			saveLen := visibleLen(saveStatus)
+			if visibleLen(currentLine)+1+saveLen > usableWidth {
+				lines = append(lines, currentLine)
+				currentLine = ""
+			}
+			gap := usableWidth - visibleLen(currentLine) - saveLen
+			if gap < 0 {
+				gap = 0
+			}
+			currentLine += strings.Repeat(" ", gap) + saveStatus
+			lines = append(lines, currentLine)
+		}
+	}
+
+	return styleLegend.Width(m.width).Render(strings.Join(lines, "\n"))
 }
 
 // ── Tab helpers ───────────────────────────────────────────────────────────────

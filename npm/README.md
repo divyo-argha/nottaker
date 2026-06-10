@@ -1,6 +1,6 @@
 <div align="center">
   <br />
-  <img src="https://raw.githubusercontent.com/divyo-argha/octonote/main/assets/logo.png" alt="octoNote" width="120" height="120" style="border-radius:26px" />
+  <img src="https://raw.githubusercontent.com/divyo-argha/octonote/main/assets/logo.png" alt="octoNote" width="120" height="120" style="border-radius:28px" />
   <!-- <br /><br /> -->
   <h1>octoNote</h1>
 
