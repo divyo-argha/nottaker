@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ncruces/zenity"
 	"github.com/nottaker/octonote/core"
 )
 
@@ -144,6 +145,74 @@ type fileSavedMsg struct {
 	at   time.Time
 }
 type fileErrMsg struct{ err string }
+
+type zenityFileSelectedMsg struct{ path string }
+type zenityFileSaveSelectedMsg struct{ path string }
+type zenityCanceledMsg struct{ mode filePromptMode }
+type zenityFailedMsg struct {
+	err  error
+	mode filePromptMode
+}
+
+func selectFileCmd() tea.Msg {
+	path, err := zenity.SelectFile(
+		zenity.Title("Open File"),
+		zenity.FileFilters{
+			{
+				Name: "Text Files",
+				Patterns: []string{
+					"*.txt", "*.md", "*.html", "*.json", "*.xml",
+					"*.js", "*.ts", "*.css", "*.scss", "*.less",
+					"*.go", "*.py", "*.sh", "*.bat", "*.ps1",
+					"*.yaml", "*.yml", "*.ini", "*.conf", "*.cfg",
+					"*.csv", "*.tsv", "*.log", "*.sql",
+				},
+				CaseFold: true,
+			},
+			{
+				Name:     "All Files",
+				Patterns: []string{"*"},
+			},
+		},
+	)
+	if err != nil {
+		if err == zenity.ErrCanceled {
+			return zenityCanceledMsg{mode: filePromptOpen}
+		}
+		return zenityFailedMsg{err: err, mode: filePromptOpen}
+	}
+	return zenityFileSelectedMsg{path: path}
+}
+
+func selectFileSaveCmd() tea.Msg {
+	path, err := zenity.SelectFileSave(
+		zenity.Title("Save File"),
+		zenity.FileFilters{
+			{
+				Name: "Text Files",
+				Patterns: []string{
+					"*.txt", "*.md", "*.html", "*.json", "*.xml",
+					"*.js", "*.ts", "*.css", "*.scss", "*.less",
+					"*.go", "*.py", "*.sh", "*.bat", "*.ps1",
+					"*.yaml", "*.yml", "*.ini", "*.conf", "*.cfg",
+					"*.csv", "*.tsv", "*.log", "*.sql",
+				},
+				CaseFold: true,
+			},
+			{
+				Name:     "All Files",
+				Patterns: []string{"*"},
+			},
+		},
+	)
+	if err != nil {
+		if err == zenity.ErrCanceled {
+			return zenityCanceledMsg{mode: filePromptSave}
+		}
+		return zenityFailedMsg{err: err, mode: filePromptSave}
+	}
+	return zenityFileSaveSelectedMsg{path: path}
+}
 
 // ── Mode enums ────────────────────────────────────────────────────────────────
 
@@ -281,6 +350,38 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.textareas[m.state.ActiveIndex].Focus()
 		}
 		m = m.resizeTextAreas()
+
+	case zenityFileSelectedMsg:
+		m.fileInput = msg.path
+		m.fileSubmitting = true
+		cmds = append(cmds, func() tea.Msg {
+			content, err := core.OpenFile(msg.path)
+			if err != nil {
+				return fileErrMsg{err: err.Error()}
+			}
+			return fileOpenedMsg{path: msg.path, content: content}
+		})
+
+	case zenityFileSaveSelectedMsg:
+		m.fileInput = msg.path
+		m.fileSubmitting = true
+		content := m.textareas[m.state.ActiveIndex].Value()
+		cmds = append(cmds, func() tea.Msg {
+			if err := core.SaveFile(msg.path, content); err != nil {
+				return fileErrMsg{err: err.Error()}
+			}
+			return fileSavedMsg{path: msg.path, at: time.Now()}
+		})
+
+	case zenityCanceledMsg:
+		m.fileMode = filePromptOff
+		m.fileInput = ""
+		m.fileSubmitting = false
+		m.filePendingClose = false
+
+	case zenityFailedMsg:
+		m.fileSubmitting = false
+		m.fileErr = fmt.Sprintf("System dialog error: %v. Please enter path manually.", msg.err)
 
 	case fileOpenedMsg:
 		m.fileMode = filePromptOff
@@ -545,7 +646,8 @@ func (m model) handleKey(msg tea.KeyMsg, cmds []tea.Cmd) (tea.Model, tea.Cmd) {
 	case tea.KeyCtrlO, tea.KeyF3:
 		m.fileMode = filePromptOpen
 		m.fileInput = ""
-		m.fileSubmitting = false
+		m.fileSubmitting = true
+		cmds = append(cmds, selectFileCmd)
 
 	// Ctrl+S or F2 → save to disk
 	case tea.KeyCtrlS, tea.KeyF2:
@@ -591,11 +693,12 @@ func (m model) handleClose(cmds []tea.Cmd) (model, []tea.Cmd) {
 	}
 
 	if tab.FilePath == "" && strings.TrimSpace(content) != "" {
-		// New tab with content — ask where to save before closing.
+		// New tab with content — ask where to save before closing using native dialog.
 		m.fileMode = filePromptSave
 		m.fileInput = ""
 		m.filePendingClose = true
-		return m, cmds
+		m.fileSubmitting = true
+		return m, append(cmds, selectFileSaveCmd)
 	}
 
 	m = m.closeTab()
@@ -618,9 +721,11 @@ func (m model) handleSave(cmds []tea.Cmd) (model, []tea.Cmd) {
 			return fileSavedMsg{path: path, at: time.Now()}
 		})
 	} else {
-		// New tab → prompt for destination path.
+		// New tab → prompt for destination path using native system dialog.
 		m.fileMode = filePromptSave
 		m.fileInput = ""
+		m.fileSubmitting = true
+		cmds = append(cmds, selectFileSaveCmd)
 	}
 	return m, cmds
 }
@@ -742,9 +847,12 @@ func (m model) renderLegend() string {
 	// Open-file prompt.
 	if m.fileMode == filePromptOpen {
 		if m.fileSubmitting {
+			statusText := "Opening system file picker…"
+			if m.fileInput != "" {
+				statusText = "Opening " + m.fileInput + " …"
+			}
 			return styleLegend.Width(m.width).Render(
-				styleFilePrompt.Render("Opening ") + styleFileInput.Render(m.fileInput) +
-					styleFilePrompt.Render("  …"),
+				styleFilePrompt.Render(statusText),
 			)
 		}
 		input := styleFileInput.Render(m.fileInput + "▌")
@@ -759,9 +867,12 @@ func (m model) renderLegend() string {
 	// Save-as prompt.
 	if m.fileMode == filePromptSave {
 		if m.fileSubmitting {
+			statusText := "Opening system save dialog…"
+			if m.fileInput != "" {
+				statusText = "Saving " + m.fileInput + " …"
+			}
 			return styleLegend.Width(m.width).Render(
-				styleFilePrompt.Render("Saving ") + styleFileInput.Render(m.fileInput) +
-					styleFilePrompt.Render("  …"),
+				styleFilePrompt.Render(statusText),
 			)
 		}
 		input := styleFileInput.Render(m.fileInput + "▌")
