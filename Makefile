@@ -4,7 +4,7 @@
 BINARY_NAME   := octonote
 GUI_BINARY    := octonote-gui
 MODULE        := github.com/nottaker/octonote
-VERSION       := 1.0.2
+VERSION       := 1.1.0
 LDFLAGS       := -s -w -X main.version=$(VERSION)
 
 # Directories

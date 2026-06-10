@@ -1,6 +1,6 @@
 {
   "name": "octonote",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Lightweight multi-tab auto-saving scratchpad — TUI for your terminal",
   "keywords": [
     "scratchpad",
@@ -41,6 +41,6 @@
     "access": "public"
   },
   "dependencies": {
-    "octonote": "^1.0.2"
+    "octonote": "^1.1.0"
   }
 }
